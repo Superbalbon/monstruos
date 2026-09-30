@@ -20,6 +20,8 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 - [Catálogo de 200 cartas](data/cartas.csv)
 - [Primeras 40 cartas jugables](data/cartas_prototipo.json)
 - [Evoluciones especiales](data/evoluciones.csv)
+- [Prompts de arte del prototipo](docs/PROMPTS_ARTE_PROTOTIPO.md)
+- [Convención para ilustraciones](assets/cards/README.md)
 
 ## Estado
 

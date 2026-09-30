@@ -1,6 +1,7 @@
 extends Control
 
 const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
+const CardViewScene = preload("res://src/card_view.gd")
 const MAX_HP := 50
 const MAX_ENERGY := 3
 const HAND_TARGET := 5
@@ -296,7 +297,7 @@ func _build_battle_screen() -> void:
 	battle_root.add_child(piles_label)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 176)
+	scroll.custom_minimum_size = Vector2(0, 276)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	battle_root.add_child(scroll)
@@ -528,6 +529,22 @@ func _resource_text() -> String:
 		"Fantasmas": return "Ectoplasma %d/8" % faction_resource
 		_: return "Consagración %d" % consecrated
 
+func _card_art_path(card: Dictionary) -> String:
+	var faction_folder: String = str({
+		"Humanos": "humanos",
+		"Hombres Lobo": "hombres_lobo",
+		"Vampiros": "vampiros",
+		"Fantasmas": "fantasmas"
+	}.get(str(card["faccion"]), ""))
+	if faction_folder.is_empty():
+		return ""
+	var base_path := "res://assets/cards/%s/%s" % [faction_folder, card["id"]]
+	for extension in [".webp", ".png", ".jpg", ".jpeg"]:
+		var candidate: String = base_path + extension
+		if ResourceLoader.exists(candidate):
+			return candidate
+	return ""
+
 func _refresh_battle() -> void:
 	player_status.text = "♥ %d/%d     ◆ %d     ⚡ %d/%d\n%s" % [maxi(0, player_hp), MAX_HP, player_block, energy, MAX_ENERGY, _resource_text()]
 	var enemy_states: Array[String] = []
@@ -545,9 +562,8 @@ func _refresh_battle() -> void:
 	for child in hand_box.get_children():
 		child.queue_free()
 	for card in hand:
-		var button := _make_button("%s  [%d⚡]\n%s" % [card["nombre"], card["coste"], card["efecto"]], 15)
-		button.custom_minimum_size = Vector2(225, 150)
-		button.tooltip_text = "Mejora: " + str(card["mejora"])
+		var button := CardViewScene.new() as CardView
+		button.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
 		button.disabled = not _can_play(card)
 		button.pressed.connect(_play_card.bind(card))
 		hand_box.add_child(button)
