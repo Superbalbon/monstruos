@@ -2,6 +2,8 @@
 .godot/
 export/
 *.tmp
+*.csv.import
+*.translation
 
 # Configuración local y secretos
 .env
@@ -15,4 +17,3 @@ export/
 Thumbs.db
 .idea/
 .vscode/
-

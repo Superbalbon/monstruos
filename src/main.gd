@@ -373,7 +373,7 @@ func _play_card(card: Dictionary) -> void:
 	energy -= int(card["coste"])
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V014", "F001", "F015"]
-	var action_message := card["nombre"] + ": "
+	var action_message: String = str(card["nombre"]) + ": "
 
 	match card_id:
 		"H001": action_message += _attack(6, 3 if enemy_vulnerable > 0 else 0)
