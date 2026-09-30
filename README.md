@@ -41,3 +41,32 @@ No requiere complementos ni recursos externos.
 - Pasa el cursor sobre una carta para ver su mejora.
 - Pulsa **Terminar turno** para resolver la intención enemiga.
 - El Murciélago Espía abre una selección de las siguientes cartas del mazo.
+
+## Ruta del prototipo
+
+La selección de estirpe inicia una expedición: aldea, sendero o refugio,
+estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
+se conservan entre encuentros. Tras vencer puedes elegir una de tres cartas
+o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
+15, sin superar 50. La ruta se mantiene en memoria; cerrar el juego la reinicia.
+
+Las recompensas son una selección fija por facción de efectos implementados.
+Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
+Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
+Ectoplasma Frío y Cadena Etérea. El catálogo de 40 cartas sigue siendo un
+documento de diseño: todavía no están implementadas todas las cartas,
+las mejoras, los aliados persistentes ni todas las reglas de Furia/Sed.
+El balance de la ruta es provisional.
+
+## Pruebas de regresión
+
+Con Godot accesible en consola:
+
+```powershell
+godot --headless --path . --script res://tests/run_tests.gd
+```
+
+Comprueba las cuatro facciones, persistencia de Salud y mazo, recompensa única,
+rechazo de recompensa, descanso, jefe, derrota, reinicio y duplicados del Espía.
+Las victorias de las pruebas de ruta se fuerzan para comprobar transiciones;
+esto no constituye una prueba de equilibrio de dificultad.

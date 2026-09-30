@@ -29,6 +29,17 @@ const STARTER_DECKS := {
 
 var cards_by_id: Dictionary = {}
 var selected_faction := ""
+var run_deck: Array[String] = []
+var stage := 0
+var screen := "title"
+var encounter_name := "EL DESVELADO"
+var encounter_bonus := 0
+const REWARDS := {
+	"Humanos": ["H004", "H005", "H007"],
+	"Hombres Lobo": ["L006", "L008", "L002"],
+	"Vampiros": ["V005", "V006", "V014"],
+	"Fantasmas": ["F004", "F006", "F001"]
+}
 var draw_pile: Array[Dictionary] = []
 var discard_pile: Array[Dictionary] = []
 var exhaust_pile: Array[Dictionary] = []
@@ -45,6 +56,7 @@ var enemy_hp := 48
 var enemy_max_hp := 48
 var enemy_block := 0
 var enemy_weak := 0
+var enemy_bleed := 0
 var enemy_vulnerable := 0
 var enemy_marked := false
 var enemy_intent_damage := 0
@@ -85,7 +97,8 @@ func _load_cards() -> bool:
 
 func _clear_screen() -> void:
 	for child in get_children():
-		child.free()
+		remove_child(child)
+		child.queue_free()
 
 func _show_data_error() -> void:
 	_clear_screen()
@@ -123,6 +136,7 @@ func _make_button(text_value: String, font_size := 18) -> Button:
 	return button
 
 func show_title_screen() -> void:
+	screen = "title"
 	_clear_screen()
 	var background := ColorRect.new()
 	background.color = Color("080b13")
@@ -197,32 +211,114 @@ func show_faction_selection() -> void:
 		box.add_child(role)
 		var choose := _make_button("JUGAR", 18)
 		choose.custom_minimum_size = Vector2(0, 48)
-		choose.pressed.connect(start_battle.bind(faction))
+		choose.pressed.connect(start_run.bind(faction))
 		box.add_child(choose)
 
 	var back := _make_button("Volver", 16)
 	back.pressed.connect(show_title_screen)
 	root.add_child(back)
 
+func start_run(faction: String) -> void:
+	selected_faction = faction
+	run_deck.assign(STARTER_DECKS[faction])
+	player_hp = MAX_HP
+	stage = 0
+	show_route()
+
+func _journey_panel(title: String, description: String) -> VBoxContainer:
+	_clear_screen()
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(900, 0)
+	box.add_theme_constant_override("separation", 18)
+	center.add_child(box)
+	box.add_child(_make_label(title, 32, Color("d8bd79")))
+	box.add_child(_make_label(description, 18))
+	box.add_child(_make_label("%s · Salud %d/%d · Mazo %d cartas" % [selected_faction, player_hp, MAX_HP, run_deck.size()], 18))
+	return box
+
+func show_route() -> void:
+	screen = "route"
+	var box := _journey_panel("EL CAMINO A SANTA VIGILIA", "Aldea → Sendero o refugio → Estación → Descanso → Monasterio")
+	var labels := ["Aldea: enfrentarse al Desvelado", "Sendero: combatir al Acechador", "Estación: combatir al Guardagujas", "Descansar junto al fuego (+15 Salud)", "Monasterio: enfrentarse al Custodio"]
+	for index in labels.size():
+		var button := _make_button(("✓ " if index < stage else "") + str(labels[index]))
+		button.disabled = index != stage
+		button.custom_minimum_size.y = 48
+		button.pressed.connect(_enter_stage)
+		box.add_child(button)
+	if stage == 1:
+		var rest := _make_button("Tomar el refugio: recuperar 12 Salud y renunciar al combate y su recompensa")
+		rest.pressed.connect(_rest.bind(12))
+		box.add_child(rest)
+
+func _enter_stage() -> void:
+	if screen != "route":
+		return
+	if stage == 3:
+		_rest(15)
+		return
+	encounter_name = str({0: "EL DESVELADO", 1: "EL ACECHADOR", 2: "EL GUARDAGUJAS", 4: "EL CUSTODIO"}.get(stage, "EL DESVELADO"))
+	encounter_bonus = 2 if stage == 4 else (1 if stage == 2 else 0)
+	enemy_max_hp = int({0: 36, 1: 40, 2: 44, 4: 58}.get(stage, 36))
+	start_battle(selected_faction)
+
+func _rest(amount: int) -> void:
+	if screen != "route" or stage not in [1, 3]:
+		return
+	player_hp = mini(MAX_HP, player_hp + amount)
+	stage += 1
+	show_route()
+
+func show_rewards() -> void:
+	if screen != "won":
+		return
+	screen = "reward"
+	var box := _journey_panel("ELIGE UNA RECOMPENSA", "Añade una carta a tu mazo para los siguientes encuentros.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	box.add_child(row)
+	for id in REWARDS[selected_faction]:
+		var card: Dictionary = cards_by_id[id]
+		var view := CardViewScene.new()
+		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
+		view.pressed.connect(_take_reward.bind(str(id)))
+		row.add_child(view)
+	var skip := _make_button("Continuar sin añadir carta")
+	skip.pressed.connect(_take_reward.bind(""))
+	box.add_child(skip)
+
+func _take_reward(id: String) -> void:
+	if screen != "reward":
+		return
+	if not id.is_empty():
+		if id not in REWARDS[selected_faction]:
+			return
+		run_deck.append(id)
+	stage += 1
+	show_route()
+
 func start_battle(faction: String) -> void:
 	selected_faction = faction
+	screen = "battle"
 	draw_pile.clear()
 	discard_pile.clear()
 	exhaust_pile.clear()
 	hand.clear()
-	for card_id in STARTER_DECKS[faction]:
+	for card_id in run_deck:
 		draw_pile.append(cards_by_id[card_id].duplicate(true))
 	draw_pile.shuffle()
-	player_hp = MAX_HP
 	player_block = 0
 	energy = MAX_ENERGY
 	faction_resource = 0
 	consecrated = 0
 	last_attack_damage = 0
-	enemy_max_hp = 48
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
 	enemy_weak = 0
+	enemy_bleed = 0
 	enemy_vulnerable = 0
 	enemy_marked = false
 	enemy_pattern = 0
@@ -279,7 +375,7 @@ func _build_battle_screen() -> void:
 	enemy_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	enemy_box.add_theme_constant_override("separation", 12)
 	enemy_panel.add_child(enemy_box)
-	var enemy_name := _make_label("EL DESVELADO", 29, Color("e3677e"))
+	var enemy_name := _make_label(encounter_name, 29, Color("e3677e"))
 	enemy_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	enemy_box.add_child(enemy_name)
 	enemy_status = _make_label("", 19)
@@ -334,6 +430,8 @@ func _set_enemy_intent() -> void:
 		1: enemy_intent_damage = 10
 		2: enemy_intent_damage = 0
 		_: enemy_intent_damage = 13
+	if enemy_intent_damage > 0:
+		enemy_intent_damage += encounter_bonus
 
 func _draw_to_hand(target_size: int) -> void:
 	while hand.size() < target_size:
@@ -375,8 +473,38 @@ func _play_card(card: Dictionary) -> void:
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V014", "F001", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
+	# Remove before drawing so this exact instance cannot be selected twice.
+	hand.erase(card)
 
 	match card_id:
+		"H004":
+			action_message += _deal_damage(3)
+			enemy_vulnerable += 2
+		"H005":
+			enemy_weak += 1
+			_draw_cards(1)
+			action_message += "Débil y robo de una carta."
+		"L006":
+			action_message += _attack(4)
+			enemy_weak += 2
+			if faction_resource >= 2:
+				faction_resource -= 2
+				enemy_bleed += 2
+		"L008": action_message += _attack(8)
+		"V005":
+			action_message += _attack(10)
+			player_hp = mini(MAX_HP, player_hp + 3)
+			faction_resource = maxi(0, faction_resource - 2)
+		"V006":
+			action_message += _attack(8)
+			faction_resource = mini(10, faction_resource + 1)
+		"F004":
+			action_message += _attack(4)
+			faction_resource = mini(8, faction_resource + 1)
+		"F006":
+			enemy_weak += 2
+			faction_resource = mini(8, faction_resource + 1)
+			action_message += "2 de Débil y 1 de Ectoplasma."
 		"H001": action_message += _attack(6, 3 if enemy_vulnerable > 0 else 0)
 		"H002":
 			player_block += 4
@@ -414,7 +542,6 @@ func _play_card(card: Dictionary) -> void:
 			var echo_damage := maxi(1, floori(last_attack_damage * 0.5))
 			action_message += _deal_damage(echo_damage) + " mediante Eco."
 
-	hand.erase(card)
 	if exhausts:
 		exhaust_pile.append(card)
 	else:
@@ -474,17 +601,21 @@ func _start_scout() -> void:
 	var title := _make_label("MURCIÉLAGO ESPÍA · ELIGE UNA CARTA", 22, Color("d8bd79"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
-	for choice in choices:
+	for index in choices.size():
+		var choice: Dictionary = choices[index]
 		var button := _make_button("%s  [%d]\n%s" % [choice["nombre"], choice["coste"], choice["efecto"]], 16)
 		button.custom_minimum_size = Vector2(0, 82)
-		button.pressed.connect(_resolve_scout.bind(choice, choices, overlay))
+		button.pressed.connect(_resolve_scout.bind(index, choices, overlay))
 		box.add_child(button)
 
-func _resolve_scout(chosen: Dictionary, choices: Array[Dictionary], overlay: ColorRect) -> void:
+func _resolve_scout(index: int, choices: Array[Dictionary], overlay: ColorRect) -> void:
+	if not choosing_card:
+		return
+	var chosen: Dictionary = choices[index]
 	hand.append(chosen)
-	for card in choices:
-		if card != chosen:
-			draw_pile.append(card)
+	for other in choices.size():
+		if other != index:
+			draw_pile.append(choices[other])
 	choosing_card = false
 	overlay.queue_free()
 	message_label.text = "El Murciélago Espía trae %s a tu mano." % chosen["nombre"]
@@ -517,8 +648,12 @@ func _end_turn() -> void:
 		player_hp -= 2
 		message_label.text += " La Sed te causa 2 de daño."
 	enemy_pattern += 1
+	enemy_hp = maxi(0, enemy_hp - enemy_bleed)
+	enemy_bleed = maxi(0, enemy_bleed - 1)
 	if player_hp <= 0:
 		_finish_battle(false)
+	elif enemy_hp <= 0:
+		_finish_battle(true)
 	else:
 		_begin_player_turn()
 
@@ -554,9 +689,12 @@ func _refresh_battle() -> void:
 		enemy_states.append("Vulnerable %d" % enemy_vulnerable)
 	if enemy_marked:
 		enemy_states.append("Marcado")
+	if enemy_bleed > 0:
+		enemy_states.append("Sangrado %d" % enemy_bleed)
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
-	intent_label.text = "Intención: defenderse" if enemy_intent_damage == 0 else "Intención: atacar por %d" % enemy_intent_damage
+	var shown_damage := maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
+	intent_label.text = "Intención: defenderse" if enemy_intent_damage == 0 else "Intención: atacar por %d" % shown_damage
 	piles_label.text = "Mazo %d  ·  Descarte %d  ·  Agotadas %d" % [draw_pile.size(), discard_pile.size(), exhaust_pile.size()]
 
 	for child in hand_box.get_children():
@@ -570,6 +708,7 @@ func _refresh_battle() -> void:
 	end_turn_button.disabled = battle_over or choosing_card
 
 func _finish_battle(victory: bool) -> void:
+	screen = "won" if victory else "lost"
 	battle_over = true
 	hand.clear()
 	_refresh_battle()
@@ -579,4 +718,11 @@ func _finish_battle(victory: bool) -> void:
 	end_turn_button.text = "VOLVER A ELEGIR ESTIRPE"
 	for connection in end_turn_button.pressed.get_connections():
 		end_turn_button.pressed.disconnect(connection["callable"])
-	end_turn_button.pressed.connect(show_faction_selection)
+	intent_label.text = "Combate terminado"
+	if victory and stage < 4:
+		end_turn_button.text = "ELEGIR RECOMPENSA"
+		end_turn_button.pressed.connect(show_rewards)
+	else:
+		if victory:
+			message_label.text = "VICTORIA · Has llegado a Santa Vigilia y vencido al Custodio."
+		end_turn_button.pressed.connect(show_faction_selection)
