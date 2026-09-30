@@ -45,7 +45,7 @@ const ENEMY_PATTERNS := {
 const REWARDS := {
 	"Humanos": ["H004", "H005", "H007", "H010", "H008"],
 	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007", "L005"],
-	"Vampiros": ["V005", "V006", "V014", "V009", "V002"],
+	"Vampiros": ["V005", "V006", "V014", "V009", "V002", "V003"],
 	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008"]
 }
 var draw_pile: Array[Dictionary] = []
@@ -67,6 +67,7 @@ var barricade_active := false
 var active_powers: Array[String] = []
 var hunter_triggered := false
 var mist_triggered := false
+var thirst_triggered := false
 var pack_played := false
 
 var enemy_hp := 48
@@ -656,6 +657,7 @@ func start_battle(faction: String) -> void:
 	active_powers.clear()
 	hunter_triggered = false
 	mist_triggered = false
+	thirst_triggered = false
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
 	enemy_weak = 0
@@ -782,6 +784,7 @@ func _begin_player_turn() -> void:
 	pack_played = false
 	hunter_triggered = false
 	mist_triggered = false
+	thirst_triggered = false
 	if not barricade_active:
 		player_block = 0
 	energy = MAX_ENERGY
@@ -893,7 +896,7 @@ func _play_card(card: Dictionary) -> void:
 				hits.append(result)
 				_log_combat("Manada Feroz · golpe %d: %s" % [hit + 1, result])
 			action_message += " / ".join(hits)
-		"H008", "L007", "V002":
+		"H008", "L007", "V002", "V003":
 			active_powers.append(card_id)
 			action_message += "poder activo durante este combate."
 		"F002":
@@ -913,7 +916,7 @@ func _play_card(card: Dictionary) -> void:
 			_gain_fury(1)
 		"V009":
 			enemy_weak += 2
-			faction_resource = mini(10, faction_resource + 1)
+			_gain_thirst(1)
 			action_message += "2 de Débil y 1 de Sed."
 		"F005":
 			action_message += _attack(7)
@@ -940,7 +943,7 @@ func _play_card(card: Dictionary) -> void:
 			faction_resource = maxi(0, faction_resource - 2)
 		"V006":
 			action_message += _attack(8)
-			faction_resource = mini(10, faction_resource + 1)
+			_gain_thirst(1)
 		"F004":
 			action_message += _attack(4)
 			faction_resource = mini(8, faction_resource + 1)
@@ -1028,6 +1031,15 @@ func _attack(base_damage: int, bonus_damage := 0) -> String:
 	var dealt := _deal_damage(damage)
 	last_attack_damage = damage
 	return dealt
+
+func _gain_thirst(amount: int) -> void:
+	var previous := faction_resource
+	faction_resource = clampi(faction_resource + amount, 0, 10)
+	if faction_resource > previous and "V003" in active_powers and not thirst_triggered:
+		thirst_triggered = true
+		var previous_hand := hand.size()
+		_draw_cards(1)
+		_log_combat("Sed Insaciable: robas %d carta al aumentar la Sed." % (hand.size() - previous_hand))
 
 func _gain_fury(amount: int) -> void:
 	faction_resource = mini(10, faction_resource + amount)

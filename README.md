@@ -47,7 +47,7 @@ No requiere complementos ni recursos externos.
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
 se conservan entre encuentros. Tras vencer puedes elegir una de cinco cartas
-(seis en Fantasmas y Hombres Lobo, accesibles con la barra horizontal)
+(seis en Fantasmas, Hombres Lobo y Vampiros, accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
@@ -115,6 +115,13 @@ veces. Cuesta 2 Ímpetu, o 1 si ya jugaste una carta con etiqueta Manada ese tur
 alterar los datos base; el descuento se reinicia cada turno. Fuerza, Débil y
 Vulnerable se calculan por golpe, el Bloqueo se consume entre golpes y el ataque
 se detiene si el enemigo muere. No se añade automáticamente al mazo inicial.
+
+**Sed Insaciable** es la sexta recompensa de Vampiros. Cuesta 1 Ímpetu y queda
+como poder activo: la primera vez que aumente realmente la Sed en cada turno,
+roba 1 carta. Combina con Colmillo Noble e Hipnosis Mental. Con Sed 10 no se
+activa ni consume la oportunidad; reducir Sed y volver a aumentarla sí puede
+activarlo. Si no quedan cartas para robar, la activación se consume igualmente.
+No roba al jugarse ni por aumentos anteriores; no admite dos copias activas.
 
 ## Intenciones enemigas
 
@@ -217,3 +224,6 @@ Pruebas de poderes persistentes, activación una vez por turno y reinicio:
 
 Pruebas de Manada Feroz, coste dinámico visible y ataques múltiples del jugador:
 `godot --headless --path . --script res://tests/pack_tests.gd`.
+
+Pruebas de Sed Insaciable, límite de Sed, robo y barajado:
+`godot --headless --path . --script res://tests/thirst_tests.gd`.
