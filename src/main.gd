@@ -38,10 +38,10 @@ var screen := "title"
 var encounter_name := "EL DESVELADO"
 var encounter_bonus := 0
 const REWARDS := {
-	"Humanos": ["H004", "H005", "H007"],
-	"Hombres Lobo": ["L006", "L008", "L002"],
-	"Vampiros": ["V005", "V006", "V014"],
-	"Fantasmas": ["F004", "F006", "F001"]
+	"Humanos": ["H004", "H005", "H007", "H010"],
+	"Hombres Lobo": ["L006", "L008", "L002", "L004"],
+	"Vampiros": ["V005", "V006", "V014", "V009"],
+	"Fantasmas": ["F004", "F006", "F001", "F005"]
 }
 var draw_pile: Array[Dictionary] = []
 var discard_pile: Array[Dictionary] = []
@@ -56,6 +56,7 @@ var consecrated := 0
 var last_attack_damage := 0
 var temporary_strength := 0
 var player_weak := 0
+var barricade_active := false
 
 var enemy_hp := 48
 var enemy_max_hp := 48
@@ -448,6 +449,7 @@ func start_battle(faction: String) -> void:
 	last_attack_damage = 0
 	temporary_strength = 0
 	player_weak = 0
+	barricade_active = false
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
 	enemy_weak = 0
@@ -556,7 +558,8 @@ func _protagonist_name() -> String:
 
 func _begin_player_turn() -> void:
 	turn += 1
-	player_block = 0
+	if not barricade_active:
+		player_block = 0
 	energy = MAX_ENERGY
 	last_attack_damage = 0
 	_set_enemy_intent()
@@ -597,6 +600,8 @@ func _ensure_draw_card() -> bool:
 func _can_play(card: Dictionary) -> bool:
 	if battle_over or choosing_card or energy < int(card["coste"]):
 		return false
+	if card["id"] == "H010" and barricade_active:
+		return false
 	if card["id"] == "F002" and faction_resource < 2:
 		return false
 	if card["id"] == "F008" and faction_resource < 3:
@@ -617,6 +622,22 @@ func _play_card(card: Dictionary) -> void:
 	hand.erase(card)
 
 	match card_id:
+		"H010":
+			barricade_active = true
+			action_message += "conservas el Bloqueo entre turnos durante este combate."
+		"L004":
+			action_message += _attack(5)
+			enemy_bleed += 2
+			_gain_fury(1)
+		"V009":
+			enemy_weak += 2
+			faction_resource = mini(10, faction_resource + 1)
+			action_message += "2 de Débil y 1 de Sed."
+		"F005":
+			action_message += _attack(7)
+			if faction_resource >= 3:
+				enemy_vulnerable += 1
+				action_message += " Aplica Vulnerable."
 		"H004":
 			action_message += _deal_damage(3)
 			enemy_vulnerable += 2
@@ -682,7 +703,9 @@ func _play_card(card: Dictionary) -> void:
 			var echo_damage := maxi(1, floori(last_attack_damage * 0.5))
 			action_message += _deal_damage(echo_damage) + " mediante Eco."
 
-	if exhausts:
+	if card_id == "H010":
+		pass # Persistent power: leaves the piles until the next combat.
+	elif exhausts:
 		exhaust_pile.append(card)
 	else:
 		discard_pile.append(card)
@@ -845,6 +868,8 @@ func _refresh_battle() -> void:
 		player_status.text += " · Fuerza +%d" % temporary_strength
 	if player_weak > 0:
 		player_status.text += " · Débil %d" % player_weak
+	if barricade_active:
+		player_status.text += " · Barricada"
 	player_status.tooltip_text = "Consagración: +3 al siguiente ataque; consume una carga."
 	match selected_faction:
 		"Hombres Lobo": player_status.tooltip_text = "Furia 10: pierde 3 Salud, vuelve a 5 y gana +2 daño de ataque este turno. Si ocurre al recibir un ataque, dura tu próximo turno."
@@ -864,6 +889,8 @@ func _refresh_battle() -> void:
 	var shown_damage := maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
 	intent_label.text = "Intención: defenderse" if enemy_intent_damage == 0 else "Intención: atacar por %d" % shown_damage
 	piles_label.text = "Mazo %d  ·  Descarte %d  ·  Agotadas %d" % [draw_pile.size(), discard_pile.size(), exhaust_pile.size()]
+	if barricade_active:
+		piles_label.text += "  ·  Poderes activos 1"
 
 	for child in hand_box.get_children():
 		child.queue_free()

@@ -46,7 +46,7 @@ No requiere complementos ni recursos externos.
 
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
-se conservan entre encuentros. Tras vencer puedes elegir una de tres cartas
+se conservan entre encuentros. Tras vencer puedes elegir una de cuatro cartas
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
@@ -58,6 +58,19 @@ documento de diseño: todavía no están implementadas todas las cartas,
 las mejoras ni los aliados persistentes. Descontrol y las penalizaciones de Sed
 ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
+
+Cada facción dispone también de una cuarta recompensa:
+
+- **Barricada:** cuesta 3 y conserva el Bloqueo restante entre turnos. Es un poder
+  activo hasta terminar el combate; no se descarta ni se vuelve a robar. Otra
+  copia no puede jugarse mientras esté activo. En el siguiente combate vuelve
+  al mazo y hay que activarlo de nuevo.
+- **Mordida Rabiosa:** 5 de daño, 2 de Sangrado y 1 de Furia, en ese orden.
+- **Hipnosis Mental:** 2 de Débil y 1 de Sed; puede alcanzar el umbral peligroso.
+- **Aparición Súbita:** 7 de daño y, con al menos 3 de Ectoplasma, aplica
+  1 de Vulnerable después del golpe, sin consumir Ectoplasma.
+
+Estas recompensas son compatibles con el formato de guardado existente.
 
 ## Pruebas de regresión
 
@@ -101,3 +114,6 @@ del Pasado. Este cambio afecta a nuevas expediciones; los guardados existentes
 conservan su mazo. Puedes consultar las reglas de cada recurso dejando el cursor
 sobre el estado del personaje. Pruebas de estas reglas:
 `godot --headless --path . --script res://tests/faction_tests.gd`.
+
+Pruebas de las nuevas cartas y del ciclo de vida de Barricada:
+`godot --headless --path . --script res://tests/reward_tests.gd`.
