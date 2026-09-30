@@ -1,0 +1,453 @@
+{
+  "version": 1,
+  "reglas": {
+    "salud_inicial": 50,
+    "impetu_por_turno": 3,
+    "mano_objetivo": 5
+  },
+  "cartas": [
+    {
+      "id": "H001",
+      "faccion": "Humanos",
+      "nombre": "Balas de Plata",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 6 de daño. Si el objetivo tiene Vulnerable, inflige 3 de daño adicional.",
+      "mejora": "Inflige 8 de daño y 3 de daño adicional contra Vulnerable.",
+      "etiquetas": ["Arma", "Plata"]
+    },
+    {
+      "id": "H002",
+      "faccion": "Humanos",
+      "nombre": "Cruz Sagrada",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 4 de Bloqueo y 1 de Consagrado.",
+      "mejora": "Obtén 6 de Bloqueo y 1 de Consagrado.",
+      "etiquetas": ["Fe", "Reliquia"]
+    },
+    {
+      "id": "H003",
+      "faccion": "Humanos",
+      "nombre": "Aldeano Valiente",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 5 de Bloqueo.",
+      "mejora": "Obtén 8 de Bloqueo.",
+      "etiquetas": ["Comunidad"]
+    },
+    {
+      "id": "H004",
+      "faccion": "Humanos",
+      "nombre": "Trampa para Lobos",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 3 de daño y aplica 2 de Vulnerable.",
+      "mejora": "Inflige 5 de daño y aplica 2 de Vulnerable.",
+      "etiquetas": ["Trampa", "Caza"]
+    },
+    {
+      "id": "H005",
+      "faccion": "Humanos",
+      "nombre": "Campana de la Iglesia",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Aplica 1 de Débil a todos los enemigos. Roba 1 carta.",
+      "mejora": "Aplica 2 de Débil a todos los enemigos. Roba 1 carta.",
+      "etiquetas": ["Fe", "Comunidad"]
+    },
+    {
+      "id": "H006",
+      "faccion": "Humanos",
+      "nombre": "Milicia Organizada",
+      "tipo": "Aliado",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "Al final de tu turno, obtén 3 de Bloqueo por cada Aliado en juego.",
+      "mejora": "Cuesta 1.",
+      "etiquetas": ["Milicia", "Comunidad"]
+    },
+    {
+      "id": "H007",
+      "faccion": "Humanos",
+      "nombre": "Antorcha Ardiente",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 7 de daño. El objetivo pierde Etéreo si lo tiene.",
+      "mejora": "Inflige 10 de daño. El objetivo pierde Etéreo si lo tiene.",
+      "etiquetas": ["Fuego", "Objeto"]
+    },
+    {
+      "id": "H008",
+      "faccion": "Humanos",
+      "nombre": "Cazador Experto",
+      "tipo": "Poder",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "La primera vez que aplicas Vulnerable cada turno, roba 1 carta.",
+      "mejora": "Empieza cada combate con esta carta en la mano.",
+      "etiquetas": ["Caza"]
+    },
+    {
+      "id": "H009",
+      "faccion": "Humanos",
+      "nombre": "Héroe Local",
+      "tipo": "Aliado",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "Al jugarlo, obtén 8 de Bloqueo. La primera vez que pierdas Salud cada turno, inflige 4 de daño al atacante.",
+      "mejora": "Obtén 12 de Bloqueo al jugarlo.",
+      "etiquetas": ["Comunidad"]
+    },
+    {
+      "id": "H010",
+      "faccion": "Humanos",
+      "nombre": "Barricada",
+      "tipo": "Poder",
+      "rareza": "Rara",
+      "coste": 3,
+      "efecto": "Tu Bloqueo ya no desaparece al comenzar tu turno.",
+      "mejora": "Cuesta 2.",
+      "etiquetas": ["Fortificación"]
+    },
+
+    {
+      "id": "L001",
+      "faccion": "Hombres Lobo",
+      "nombre": "Garra Salvaje",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 6 de daño.",
+      "mejora": "Inflige 9 de daño.",
+      "etiquetas": ["Garra"]
+    },
+    {
+      "id": "L002",
+      "faccion": "Hombres Lobo",
+      "nombre": "Aullido",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 2 de Furia. Aplica 1 de Débil a todos los enemigos.",
+      "mejora": "Obtén 3 de Furia. Aplica 1 de Débil a todos los enemigos.",
+      "etiquetas": ["Manada", "Furia"]
+    },
+    {
+      "id": "L003",
+      "faccion": "Hombres Lobo",
+      "nombre": "Alfa Dominante",
+      "tipo": "Poder",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "La primera carta de Manada que juegues cada turno cuesta 1 menos.",
+      "mejora": "Cuesta 1.",
+      "etiquetas": ["Alfa", "Manada"]
+    },
+    {
+      "id": "L004",
+      "faccion": "Hombres Lobo",
+      "nombre": "Mordida Rabiosa",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 5 de daño y aplica 2 de Sangrado. Gana 1 de Furia.",
+      "mejora": "Inflige 7 de daño y aplica 3 de Sangrado. Gana 1 de Furia.",
+      "etiquetas": ["Mordida", "Sangrado"]
+    },
+    {
+      "id": "L005",
+      "faccion": "Hombres Lobo",
+      "nombre": "Manada Feroz",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 2,
+      "efecto": "Inflige 4 de daño tres veces. Cuesta 1 menos si ya jugaste una carta de Manada este turno.",
+      "mejora": "Inflige 5 de daño tres veces. Conserva la reducción de coste.",
+      "etiquetas": ["Manada"]
+    },
+    {
+      "id": "L006",
+      "faccion": "Hombres Lobo",
+      "nombre": "Colmillo Venenoso",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 4 de daño y aplica 2 de Débil. Consume 2 de Furia; si lo hace, aplica 2 de Sangrado.",
+      "mejora": "Inflige 6 de daño y aplica los mismos estados.",
+      "etiquetas": ["Mordida", "Furia"]
+    },
+    {
+      "id": "L007",
+      "faccion": "Hombres Lobo",
+      "nombre": "Luna Llena",
+      "tipo": "Poder",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "Al inicio de tu turno, gana 1 de Furia y 1 de Fuerza durante ese turno.",
+      "mejora": "Al jugarla, gana 2 de Furia.",
+      "etiquetas": ["Luna", "Furia"]
+    },
+    {
+      "id": "L008",
+      "faccion": "Hombres Lobo",
+      "nombre": "Lobo Solitario",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 8 de daño. Inflige 4 menos si tienes un Aliado en juego.",
+      "mejora": "Inflige 11 de daño. Inflige 4 menos si tienes un Aliado en juego.",
+      "etiquetas": ["Solitario"]
+    },
+    {
+      "id": "L018",
+      "faccion": "Hombres Lobo",
+      "nombre": "Pista de Presa",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 0,
+      "efecto": "Aplica Marcado. Roba 1 carta. Agota.",
+      "mejora": "No se Agota.",
+      "etiquetas": ["Caza"]
+    },
+    {
+      "id": "L029",
+      "faccion": "Hombres Lobo",
+      "nombre": "Piel Gruesa",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 5 de Bloqueo.",
+      "mejora": "Obtén 8 de Bloqueo.",
+      "etiquetas": ["Defensa"]
+    },
+
+    {
+      "id": "V001",
+      "faccion": "Vampiros",
+      "nombre": "Mordisco Vampírico",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 6 de daño.",
+      "mejora": "Inflige 9 de daño.",
+      "etiquetas": ["Mordida"]
+    },
+    {
+      "id": "V002",
+      "faccion": "Vampiros",
+      "nombre": "Niebla Eterna",
+      "tipo": "Poder",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "La primera vez que juegues una carta de Niebla cada turno, obtén 3 de Bloqueo.",
+      "mejora": "Obtén 5 de Bloqueo.",
+      "etiquetas": ["Niebla"]
+    },
+    {
+      "id": "V003",
+      "faccion": "Vampiros",
+      "nombre": "Sed Insaciable",
+      "tipo": "Poder",
+      "rareza": "Rara",
+      "coste": 1,
+      "efecto": "Cuando aumente tu Sed, roba 1 carta una vez por turno.",
+      "mejora": "La primera activación de cada combate también otorga 1 de Ímpetu.",
+      "etiquetas": ["Sed"]
+    },
+    {
+      "id": "V004",
+      "faccion": "Vampiros",
+      "nombre": "Murciélago Espía",
+      "tipo": "Aliado",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Muestra las dos próximas cartas del mazo. Elige una para robar y devuelve la otra arriba.",
+      "mejora": "Mira tres cartas y elige una.",
+      "etiquetas": ["Murciélago", "Nobleza"]
+    },
+    {
+      "id": "V005",
+      "faccion": "Vampiros",
+      "nombre": "Drenaje Vital",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 2,
+      "efecto": "Inflige 10 de daño, cura 3 de Salud y reduce la Sed en 2.",
+      "mejora": "Inflige 13 de daño y cura 4 de Salud. Reduce la Sed en 2.",
+      "etiquetas": ["Drenaje", "Sangre"]
+    },
+    {
+      "id": "V006",
+      "faccion": "Vampiros",
+      "nombre": "Colmillo Noble",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 8 de daño y aumenta la Sed en 1.",
+      "mejora": "Inflige 11 de daño y aumenta la Sed en 1.",
+      "etiquetas": ["Mordida", "Nobleza"]
+    },
+    {
+      "id": "V007",
+      "faccion": "Vampiros",
+      "nombre": "Velo de Sombras",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 5 de Bloqueo.",
+      "mejora": "Obtén 8 de Bloqueo.",
+      "etiquetas": ["Niebla", "Defensa"]
+    },
+    {
+      "id": "V008",
+      "faccion": "Vampiros",
+      "nombre": "Conversión",
+      "tipo": "Habilidad",
+      "rareza": "Rara",
+      "coste": 2,
+      "efecto": "Crea en tu mano una copia temporal de la última carta no vampírica usada por un enemigo. Cuesta 1 menos. Agota.",
+      "mejora": "La copia cuesta 2 menos.",
+      "etiquetas": ["Conversión"]
+    },
+    {
+      "id": "V009",
+      "faccion": "Vampiros",
+      "nombre": "Hipnosis Mental",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Aplica 2 de Débil. Aumenta la Sed en 1.",
+      "mejora": "Aplica 3 de Débil. Aumenta la Sed en 1.",
+      "etiquetas": ["Hipnosis", "Sed"]
+    },
+    {
+      "id": "V014",
+      "faccion": "Vampiros",
+      "nombre": "Sangre Pura",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 0,
+      "efecto": "Reduce la Sed en 2. Roba 1 carta. Agota.",
+      "mejora": "Reduce la Sed en 3. Roba 1 carta. Agota.",
+      "etiquetas": ["Sangre"]
+    },
+
+    {
+      "id": "F001",
+      "faccion": "Fantasmas",
+      "nombre": "Susurro Espectral",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 0,
+      "efecto": "Obtén 1 de Ectoplasma. Roba 1 carta. Agota.",
+      "mejora": "Obtén 2 de Ectoplasma. Roba 1 carta. Agota.",
+      "etiquetas": ["Espíritu"]
+    },
+    {
+      "id": "F002",
+      "faccion": "Fantasmas",
+      "nombre": "Posesión Leve",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Consume 2 de Ectoplasma. Reduce a la mitad el daño de la próxima intención enemiga.",
+      "mejora": "Consume 1 de Ectoplasma.",
+      "etiquetas": ["Posesión"]
+    },
+    {
+      "id": "F003",
+      "faccion": "Fantasmas",
+      "nombre": "Velo Fantasmal",
+      "tipo": "Habilidad",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Obtén 5 de Bloqueo.",
+      "mejora": "Obtén 8 de Bloqueo.",
+      "etiquetas": ["Defensa"]
+    },
+    {
+      "id": "F004",
+      "faccion": "Fantasmas",
+      "nombre": "Ectoplasma Frío",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 4 de daño y obtén 1 de Ectoplasma.",
+      "mejora": "Inflige 7 de daño y obtén 1 de Ectoplasma.",
+      "etiquetas": ["Ectoplasma", "Frío"]
+    },
+    {
+      "id": "F005",
+      "faccion": "Fantasmas",
+      "nombre": "Aparición Súbita",
+      "tipo": "Ataque",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Inflige 7 de daño. Si tienes 3 o más de Ectoplasma, aplica 1 de Vulnerable.",
+      "mejora": "Inflige 10 de daño y conserva el efecto adicional.",
+      "etiquetas": ["Aparición"]
+    },
+    {
+      "id": "F006",
+      "faccion": "Fantasmas",
+      "nombre": "Cadena Etérea",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 1,
+      "efecto": "Aplica 2 de Débil. Obtén 1 de Ectoplasma.",
+      "mejora": "Aplica 3 de Débil. Obtén 1 de Ectoplasma.",
+      "etiquetas": ["Cadena", "Espíritu"]
+    },
+    {
+      "id": "F007",
+      "faccion": "Fantasmas",
+      "nombre": "Lamento Nocturno",
+      "tipo": "Habilidad",
+      "rareza": "Poco común",
+      "coste": 2,
+      "efecto": "Aplica 2 de Débil a todos los enemigos. Obtén 2 de Ectoplasma.",
+      "mejora": "Cuesta 1.",
+      "etiquetas": ["Lamento"]
+    },
+    {
+      "id": "F008",
+      "faccion": "Fantasmas",
+      "nombre": "Paso a Través",
+      "tipo": "Habilidad",
+      "rareza": "Rara",
+      "coste": 1,
+      "efecto": "Consume 3 de Ectoplasma para obtener Etéreo. Agota.",
+      "mejora": "Consume 2 de Ectoplasma.",
+      "etiquetas": ["Etéreo"]
+    },
+    {
+      "id": "F009",
+      "faccion": "Fantasmas",
+      "nombre": "Toque Gélido",
+      "tipo": "Ataque",
+      "rareza": "Común",
+      "coste": 1,
+      "efecto": "Inflige 6 de daño.",
+      "mejora": "Inflige 9 de daño.",
+      "etiquetas": ["Frío"]
+    },
+    {
+      "id": "F015",
+      "faccion": "Fantasmas",
+      "nombre": "Eco del Pasado",
+      "tipo": "Habilidad",
+      "rareza": "Rara",
+      "coste": 1,
+      "efecto": "Consume 2 de Ectoplasma. Repite la última carta de Ataque jugada este turno al 50 % de potencia. Agota.",
+      "mejora": "La repite al 75 % de potencia.",
+      "etiquetas": ["Eco", "Memoria"]
+    }
+  ]
+}

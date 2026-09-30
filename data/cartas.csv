@@ -1,0 +1,201 @@
+id,faccion,nombre,estado
+H001,Humanos,Balas de Plata,Concepto
+H002,Humanos,Cruz Sagrada,Concepto
+H003,Humanos,Aldeano Valiente,Concepto
+H004,Humanos,Trampa para Lobos,Concepto
+H005,Humanos,Campana de la Iglesia,Concepto
+H006,Humanos,Milicia Organizada,Concepto
+H007,Humanos,Antorcha Ardiente,Concepto
+H008,Humanos,Cazador Experto,Concepto
+H009,Humanos,Héroe Local,Concepto
+H010,Humanos,Barricada,Concepto
+H011,Humanos,Poción de Fuerza,Concepto
+H012,Humanos,Altar,Concepto
+H013,Humanos,Cadena de Plata,Concepto
+H014,Humanos,Ritual Exorcista,Concepto
+H015,Humanos,Daga Consagrada,Concepto
+H016,Humanos,Compañero Fiel,Concepto
+H017,Humanos,Puerta Fortificada,Concepto
+H018,Humanos,Espada Bendita,Concepto
+H019,Humanos,Escudo de Fe,Concepto
+H020,Humanos,Sacerdote Purificador,Concepto
+H021,Humanos,Oración Colectiva,Concepto
+H022,Humanos,Perro Guardián,Concepto
+H023,Humanos,Red de Contención,Concepto
+H024,Humanos,Bendición Divina,Concepto
+H025,Humanos,Voto de Silencio,Concepto
+H026,Humanos,Linterna Sagrada,Concepto
+H027,Humanos,Alarma del Pueblo,Concepto
+H028,Humanos,Curación Masiva,Concepto
+H029,Humanos,Juramento de Lealtad,Concepto
+H030,Humanos,Ballesta Santa,Concepto
+H031,Humanos,Resistencia Común,Concepto
+H032,Humanos,Faro de Esperanza,Concepto
+H033,Humanos,Guardia Nocturno,Concepto
+H034,Humanos,Estandarte Humano,Concepto
+H035,Humanos,Llegan Refuerzos,Concepto
+H036,Humanos,Martillo de Hierro,Concepto
+H037,Humanos,Velo Protector,Concepto
+H038,Humanos,Canto Gregoriano,Concepto
+H039,Humanos,Trinchera,Concepto
+H040,Humanos,Explorador Rural,Concepto
+H041,Humanos,Bendición Matinal,Concepto
+H042,Humanos,Lanza de Fresno,Concepto
+H043,Humanos,Alianza Vecinal,Concepto
+H044,Humanos,Tumba Sellada,Concepto
+H045,Humanos,Aliento de Vida,Concepto
+H046,Humanos,Centinela Leal,Concepto
+H047,Humanos,Muro de Escudos,Concepto
+H048,Humanos,Voz del Pueblo,Concepto
+H049,Humanos,Juramento Final,Concepto
+H050,Humanos,Gloria Matutina,Concepto
+L001,Hombres Lobo,Garra Salvaje,Concepto
+L002,Hombres Lobo,Aullido,Concepto
+L003,Hombres Lobo,Alfa Dominante,Concepto
+L004,Hombres Lobo,Mordida Rabiosa,Concepto
+L005,Hombres Lobo,Manada Feroz,Concepto
+L006,Hombres Lobo,Colmillo Venenoso,Concepto
+L007,Hombres Lobo,Luna Llena,Concepto
+L008,Hombres Lobo,Lobo Solitario,Concepto
+L009,Hombres Lobo,Lobezno,Concepto
+L010,Hombres Lobo,Rugido Terrorífico,Concepto
+L011,Hombres Lobo,Cicatriz de Batalla,Concepto
+L012,Hombres Lobo,Salto Letal,Concepto
+L013,Hombres Lobo,Nido de Lobos,Concepto
+L014,Hombres Lobo,Mordisco Infectado,Concepto
+L015,Hombres Lobo,Alfa Supremo,Concepto
+L016,Hombres Lobo,Rastro Oculto,Concepto
+L017,Hombres Lobo,Colmillo Roto,Concepto
+L018,Hombres Lobo,Pista de Presa,Concepto
+L019,Hombres Lobo,Luna Creciente,Concepto
+L020,Hombres Lobo,Mordisco Profundo,Concepto
+L021,Hombres Lobo,Zarpazo Nocturno,Concepto
+L022,Hombres Lobo,Furia Bestial,Concepto
+L023,Hombres Lobo,Carrera Salvaje,Concepto
+L024,Hombres Lobo,Rastro de Sangre,Concepto
+L025,Hombres Lobo,Emboscada Lupina,Concepto
+L026,Hombres Lobo,Garras Heladas,Concepto
+L027,Hombres Lobo,Caza en Grupo,Concepto
+L028,Hombres Lobo,Instinto Primitivo,Concepto
+L029,Hombres Lobo,Piel Gruesa,Concepto
+L030,Hombres Lobo,Uñas Afiladas,Concepto
+L031,Hombres Lobo,Viento Nocturno,Concepto
+L032,Hombres Lobo,Jauría Implacable,Concepto
+L033,Hombres Lobo,Zarpas Sangrientas,Concepto
+L034,Hombres Lobo,Aullido Colectivo,Concepto
+L035,Hombres Lobo,Furia Lunar,Concepto
+L036,Hombres Lobo,Emboscada Perfecta,Concepto
+L037,Hombres Lobo,Bestia Desatada,Concepto
+L038,Hombres Lobo,Rugido Primario,Concepto
+L039,Hombres Lobo,Manada Alfa,Concepto
+L040,Hombres Lobo,Garra Torcida,Concepto
+L041,Hombres Lobo,Salto Voraz,Concepto
+L042,Hombres Lobo,Cicatrices Eternas,Concepto
+L043,Hombres Lobo,Instinto Letal,Concepto
+L044,Hombres Lobo,Uñas de Luna,Concepto
+L045,Hombres Lobo,Caza Nocturna,Concepto
+L046,Hombres Lobo,Furia Incontrolable,Concepto
+L047,Hombres Lobo,Rastro Fértil,Concepto
+L048,Hombres Lobo,Zarpazo Final,Concepto
+L049,Hombres Lobo,Aullido Eterno,Concepto
+L050,Hombres Lobo,Jauría Legendaria,Concepto
+V001,Vampiros,Mordisco Vampírico,Concepto
+V002,Vampiros,Niebla Eterna,Concepto
+V003,Vampiros,Sed Insaciable,Concepto
+V004,Vampiros,Murciélago Espía,Concepto
+V005,Vampiros,Drenaje Vital,Concepto
+V006,Vampiros,Colmillo Noble,Concepto
+V007,Vampiros,Velo de Sombras,Concepto
+V008,Vampiros,Conversión,Concepto
+V009,Vampiros,Hipnosis Mental,Concepto
+V010,Vampiros,Tumba Oculta,Concepto
+V011,Vampiros,Esclavo Encadenado,Concepto
+V012,Vampiros,Regeneración Nocturna,Concepto
+V013,Vampiros,Niebla Roja,Concepto
+V014,Vampiros,Sangre Pura,Concepto
+V015,Vampiros,Abrazo de la Noche,Concepto
+V016,Vampiros,Sangre Antigua,Concepto
+V017,Vampiros,Criado Leal,Concepto
+V018,Vampiros,Vino de Sangre,Concepto
+V019,Vampiros,Alas de Murciélago,Concepto
+V020,Vampiros,Maldición Eterna,Concepto
+V021,Vampiros,Bocado Suave,Concepto
+V022,Vampiros,Colmillos Gemelos,Concepto
+V023,Vampiros,Sangre Robada,Concepto
+V024,Vampiros,Señor de la Noche,Concepto
+V025,Vampiros,Daga de Plata (débil),Concepto
+V026,Vampiros,Espectro Servil,Concepto
+V027,Vampiros,Abrazo Forzado,Concepto
+V028,Vampiros,Sed Compartida,Concepto
+V029,Vampiros,Murciélago Guardián,Concepto
+V030,Vampiros,Velo Carmesí,Concepto
+V031,Vampiros,Colmillo Dorado,Concepto
+V032,Vampiros,Tumba Real,Concepto
+V033,Vampiros,Hipnosis Masiva,Concepto
+V034,Vampiros,Niebla Letal,Concepto
+V035,Vampiros,Criado Eterno,Concepto
+V036,Vampiros,Drenaje Masivo,Concepto
+V037,Vampiros,Alas Sangrientas,Concepto
+V038,Vampiros,Maldición Vampírica,Concepto
+V039,Vampiros,Bocado Final,Concepto
+V040,Vampiros,Señor Supremo,Concepto
+V041,Vampiros,Regeneración Total,Concepto
+V042,Vampiros,Esclavo Perfecto,Concepto
+V043,Vampiros,Conversión Rápida,Concepto
+V044,Vampiros,Sed Devoradora,Concepto
+V045,Vampiros,Velo Infinito,Concepto
+V046,Vampiros,Colmillos Legendarios,Concepto
+V047,Vampiros,Sangre Divina,Concepto
+V048,Vampiros,Niebla Suprema,Concepto
+V049,Vampiros,Abrazo Eterno,Concepto
+V050,Vampiros,Tumba Inmortal,Concepto
+F001,Fantasmas,Susurro Espectral,Concepto
+F002,Fantasmas,Posesión Leve,Concepto
+F003,Fantasmas,Velo Fantasmal,Concepto
+F004,Fantasmas,Ectoplasma Frío,Concepto
+F005,Fantasmas,Aparición Súbita,Concepto
+F006,Fantasmas,Cadena Etérea,Concepto
+F007,Fantasmas,Lamento Nocturno,Concepto
+F008,Fantasmas,Paso a Través,Concepto
+F009,Fantasmas,Toque Gélido,Concepto
+F010,Fantasmas,Espectro Errante,Concepto
+F011,Fantasmas,Poltergeist,Concepto
+F012,Fantasmas,Visión del Más Allá,Concepto
+F013,Fantasmas,Aura de Miedo,Concepto
+F014,Fantasmas,Fantasma Aliado,Concepto
+F015,Fantasmas,Eco del Pasado,Concepto
+F016,Fantasmas,Mano Invisible,Concepto
+F017,Fantasmas,Bruma Espiritual,Concepto
+F018,Fantasmas,Suspiro Eterno,Concepto
+F019,Fantasmas,Posesión Fuerte,Concepto
+F020,Fantasmas,Lamento Colectivo,Concepto
+F021,Fantasmas,Cadena Rota,Concepto
+F022,Fantasmas,Aparición Masiva,Concepto
+F023,Fantasmas,Toque Helado,Concepto
+F024,Fantasmas,Velo Transparente,Concepto
+F025,Fantasmas,Ectoplasma Pesado,Concepto
+F026,Fantasmas,Espectro Guardián,Concepto
+F027,Fantasmas,Poltergeist Caótico,Concepto
+F028,Fantasmas,Visión Clara,Concepto
+F029,Fantasmas,Aura Glacial,Concepto
+F030,Fantasmas,Fantasma Neutral,Concepto
+F031,Fantasmas,Eco Infinito,Concepto
+F032,Fantasmas,Mano Espectral,Concepto
+F033,Fantasmas,Bruma Caótica,Concepto
+F034,Fantasmas,Susurro Final,Concepto
+F035,Fantasmas,Posesión Total,Concepto
+F036,Fantasmas,Lamento Supremo,Concepto
+F037,Fantasmas,Cadena Invisible,Concepto
+F038,Fantasmas,Aparición Eterna,Concepto
+F039,Fantasmas,Toque Mortal,Concepto
+F040,Fantasmas,Velo del Vacío,Concepto
+F041,Fantasmas,Ectoplasma Vivo,Concepto
+F042,Fantasmas,Espectro Supremo,Concepto
+F043,Fantasmas,Poltergeist Final,Concepto
+F044,Fantasmas,Visión Oculta,Concepto
+F045,Fantasmas,Aura Eterna,Concepto
+F046,Fantasmas,Fantasma Caótico,Concepto
+F047,Fantasmas,Eco del Caos,Concepto
+F048,Fantasmas,Mano del Abismo,Concepto
+F049,Fantasmas,Bruma Final,Concepto
+F050,Fantasmas,Susurro del Fin,Concepto

@@ -1,0 +1,80 @@
+# Sistema de combate
+
+## Reglas base del prototipo
+
+- El jugador comienza cada combate con **50 de Salud**.
+- Al inicio de cada turno obtiene **3 de Ímpetu** y roba hasta tener **5 cartas**.
+- Las cartas jugadas van al descarte, salvo las cartas con **Agotar**.
+- Cuando el mazo se vacía, el descarte se baraja y forma un mazo nuevo.
+- El **Bloqueo** absorbe daño y desaparece al comenzar el turno del jugador.
+- Cada enemigo muestra su siguiente intención: ataque, defensa, estado o acción especial.
+- Una carta solo puede mejorarse una vez durante la partida.
+
+Estos valores son un punto de partida para pruebas, no cifras definitivas.
+
+## Estados comunes
+
+| Estado | Regla inicial |
+|---|---|
+| Vulnerable | Recibe un 50 % más de daño de ataques durante sus cargas. Cada turno pierde una carga. |
+| Débil | Inflige un 25 % menos de daño de ataques durante sus cargas. Cada turno pierde una carga. |
+| Sangrado | Al terminar su turno recibe daño igual a las cargas y después pierde una carga. |
+| Consagrado | La siguiente carta de ataque u objeto obtiene el efecto adicional indicado. |
+| Etéreo | Evita todo el daño del próximo ataque recibido y después se elimina. |
+| Marcado | Activa efectos de Caza. Solo puede haber un objetivo marcado por el jugador. |
+
+Los porcentajes se redondean hacia abajo, con un mínimo de 1 cuando el ataque original causaría daño.
+
+## Recursos de facción
+
+### Humanos — Preparación
+
+Los Humanos no tienen un medidor adicional. Sus cartas generan **Consagración**, aliados y Bloqueo persistente. Son la facción de referencia para medir el balance de las demás.
+
+### Hombres Lobo — Furia
+
+- Empiezan cada combate con 0 y pueden acumular hasta 10.
+- Obtienen 1 de Furia al perder Salud por un ataque enemigo y mediante cartas.
+- Algunas cartas consumen Furia para mejorar su efecto.
+- Al llegar a 10, entran en **Descontrol**: ganan 2 de Fuerza ese turno, pierden 3 de Salud y la Furia vuelve a 5.
+
+### Vampiros — Sed
+
+- Empiezan con 0 y pueden acumular hasta 10.
+- Las técnicas vampíricas más potentes aumentan la Sed.
+- El Drenaje y ciertas cartas de sangre reducen la Sed.
+- Al terminar el turno con 8 o más, pierden 2 de Salud. Con 10, además obtienen 1 de Débil.
+
+### Fantasmas — Ectoplasma
+
+- Empiezan con 0 y pueden acumular hasta 8.
+- No desaparece entre turnos durante el combate.
+- Se obtiene mediante cartas de espíritu y se consume para activar Ecos, Posesiones y efectos Etéreos.
+
+## Tipos de carta
+
+- **Ataque:** causa daño directamente.
+- **Habilidad:** defensa, control, robo o manipulación de recursos.
+- **Poder:** efecto pasivo para el resto del combate; se retira del mazo tras jugarlo.
+- **Aliado:** permanece en juego y activa una habilidad una vez por turno.
+
+## Mazos iniciales propuestos
+
+Cada personaje empieza con 10 cartas, usando repeticiones para que el mazo sea comprensible:
+
+- **Humanos:** 4 Balas de Plata, 4 Aldeano Valiente, 1 Cruz Sagrada y 1 Antorcha Ardiente.
+- **Hombres Lobo:** 4 Garra Salvaje, 4 Piel Gruesa, 1 Aullido y 1 Pista de Presa.
+- **Vampiros:** 4 Mordisco Vampírico, 4 Velo de Sombras, 1 Sangre Pura y 1 Murciélago Espía.
+- **Fantasmas:** 4 Toque Gélido, 4 Velo Fantasmal, 1 Susurro Espectral y 1 Eco del Pasado.
+
+## Referencia de balance
+
+Una carta común de coste 1 debería aportar aproximadamente uno de estos valores:
+
+- 6 de daño.
+- 5 de Bloqueo.
+- 4 de daño y un beneficio menor.
+- 3 de Bloqueo y un beneficio menor.
+
+Las sinergias pueden superar esa referencia si requieren preparación, consumen un recurso limitado o introducen un riesgo real.
+
