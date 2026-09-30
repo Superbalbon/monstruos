@@ -12,6 +12,7 @@ func check(condition: bool, message: String) -> void:
 
 func run() -> void:
 	var game = load("res://main.tscn").instantiate()
+	game.persistence_enabled = false
 	root.add_child(game)
 	for faction in game.STARTER_DECKS:
 		game.start_run(faction)

@@ -48,7 +48,7 @@ La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
 se conservan entre encuentros. Tras vencer puedes elegir una de tres cartas
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
-15, sin superar 50. La ruta se mantiene en memoria; cerrar el juego la reinicia.
+15, sin superar 50. El guardado automático permite continuar desde el menú.
 
 Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
@@ -70,3 +70,21 @@ Comprueba las cuatro facciones, persistencia de Salud y mazo, recompensa única,
 rechazo de recompensa, descanso, jefe, derrota, reinicio y duplicados del Espía.
 Las victorias de las pruebas de ruta se fuerzan para comprobar transiciones;
 esto no constituye una prueba de equilibrio de dificultad.
+
+## Guardado y consulta del mazo
+
+- Se guarda al llegar a la ruta, tras vencer (recompensa pendiente), al elegir
+  recompensa y después del descanso. Victoria final y derrota cierran la expedición.
+- Cerrar durante un combate permite reintentarlo desde el punto de control previo,
+  con la Salud previa y un nuevo barajado; no se recupera el turno exacto.
+- `Continuar` restaura facción, Salud, etapa y mazo. Elegir estirpe para una nueva
+  expedición sustituye la anterior, tal como indica el menú.
+- `Ver mazo` muestra todas las copias de la expedición desde la ruta y el combate.
+- El archivo `user://expedicion.json` es local al ordenador, no se sincroniza
+  mediante GitHub. En Windows normalmente se encuentra en
+  `%APPDATA%/Godot/app_userdata/Monstruos/expedicion.json`.
+- Guardados dañados o de otra versión se rechazan con aviso. Una escritura
+  temporal precede al reemplazo del archivo; un fallo se muestra en pantalla.
+
+Pruebas adicionales: `godot --headless --path . --script res://tests/save_tests.gd`.
+Las pruebas usan archivos exclusivos en `.godot/` y no modifican la partida real.

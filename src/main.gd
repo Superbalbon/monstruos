@@ -2,6 +2,9 @@ extends Control
 
 const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
 const CardViewScene = preload("res://src/card_view.gd")
+var save_store = preload("res://src/run_save.gd").new()
+var persistence_enabled := true
+var save_failed := false
 const MAX_HP := 50
 const MAX_ENERGY := 3
 const HAND_TARGET := 5
@@ -169,6 +172,74 @@ func show_title_screen() -> void:
 	start_button.custom_minimum_size = Vector2(0, 58)
 	start_button.pressed.connect(show_faction_selection)
 	content.add_child(start_button)
+	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS) if persistence_enabled else {}
+	if not saved.is_empty() and saved.state != "finished":
+		start_button.text = "NUEVA EXPEDICIÓN"
+		var resume := _make_button("CONTINUAR · %s · Etapa %d" % [saved.faction, int(saved.stage) + 1], 21)
+		resume.custom_minimum_size.y = 58
+		resume.pressed.connect(_resume_run)
+		content.add_child(resume)
+		content.add_child(_make_label("Una nueva expedición sustituye el guardado al elegir estirpe.", 16))
+	if not save_store.last_error.is_empty():
+		content.add_child(_make_label(save_store.last_error, 16, Color("ee6b7a")))
+	if save_failed:
+		content.add_child(_make_label("El último guardado falló; continuar recuperará el anterior.", 16, Color("ee6b7a")))
+
+func _checkpoint(state: String) -> void:
+	if not persistence_enabled:
+		return
+	save_failed = not save_store.write({"version": 1, "state": state, "faction": selected_faction,
+		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck})
+	if save_failed:
+		var warning := _make_label("No se pudo guardar. " + save_store.last_error, 16, Color("ee6b7a"))
+		warning.position = Vector2(12, 2)
+		add_child(warning)
+
+func _resume_run() -> void:
+	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS)
+	if saved.is_empty() or saved.state == "finished":
+		show_title_screen()
+		return
+	selected_faction = saved.faction
+	run_deck.assign(saved.deck)
+	player_hp = int(saved.hp)
+	stage = int(saved.stage)
+	if saved.state == "reward":
+		screen = "won"
+		show_rewards()
+	else:
+		show_route()
+
+func _show_deck() -> void:
+	if has_node("DeckOverlay") or choosing_card:
+		return
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	overlay.add_child(box)
+	box.add_child(_make_label("TU MAZO · %d cartas" % run_deck.size(), 28, Color("d8bd79")))
+	box.add_child(_make_label("Composición de la expedición; incluye todas las copias.", 18))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	scroll.add_child(grid)
+	for id in run_deck:
+		var view := CardViewScene.new()
+		view.setup(cards_by_id[id], FACTION_COLORS[selected_faction], _card_art_path(cards_by_id[id]))
+		view.focus_mode = Control.FOCUS_NONE
+		grid.add_child(view)
+	var close := _make_button("CERRAR MAZO")
+	close.custom_minimum_size.y = 48
+	close.pressed.connect(overlay.queue_free)
+	box.add_child(close)
+	close.grab_focus()
 
 func show_faction_selection() -> void:
 	_clear_screen()
@@ -253,6 +324,13 @@ func show_route() -> void:
 		var rest := _make_button("Tomar el refugio: recuperar 12 Salud y renunciar al combate y su recompensa")
 		rest.pressed.connect(_rest.bind(12))
 		box.add_child(rest)
+	var deck_button := _make_button("VER MAZO")
+	deck_button.pressed.connect(_show_deck)
+	box.add_child(deck_button)
+	var menu := _make_button("VOLVER AL MENÚ · expedición guardada")
+	menu.pressed.connect(show_title_screen)
+	box.add_child(menu)
+	_checkpoint("route")
 
 func _enter_stage() -> void:
 	if screen != "route":
@@ -289,6 +367,7 @@ func show_rewards() -> void:
 	var skip := _make_button("Continuar sin añadir carta")
 	skip.pressed.connect(_take_reward.bind(""))
 	box.add_child(skip)
+	_checkpoint("reward")
 
 func _take_reward(id: String) -> void:
 	if screen != "reward":
@@ -348,6 +427,9 @@ func _build_battle_screen() -> void:
 	header.add_child(title)
 	var faction_label := _make_label(selected_faction.to_upper(), 20, FACTION_COLORS[selected_faction])
 	header.add_child(faction_label)
+	var deck_button := _make_button("VER MAZO", 16)
+	deck_button.pressed.connect(_show_deck)
+	header.add_child(deck_button)
 
 	var battlefield := HBoxContainer.new()
 	battlefield.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -720,9 +802,11 @@ func _finish_battle(victory: bool) -> void:
 		end_turn_button.pressed.disconnect(connection["callable"])
 	intent_label.text = "Combate terminado"
 	if victory and stage < 4:
+		_checkpoint("reward")
 		end_turn_button.text = "ELEGIR RECOMPENSA"
 		end_turn_button.pressed.connect(show_rewards)
 	else:
+		_checkpoint("finished")
 		if victory:
 			message_label.text = "VICTORIA · Has llegado a Santa Vigilia y vencido al Custodio."
 		end_turn_button.pressed.connect(show_faction_selection)
