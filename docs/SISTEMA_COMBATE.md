@@ -37,6 +37,7 @@ Los Humanos no tienen un medidor adicional. Sus cartas generan **Consagración**
 - Obtienen 1 de Furia al perder Salud por un ataque enemigo y mediante cartas.
 - Algunas cartas consumen Furia para mejorar su efecto.
 - Al llegar a 10, entran en **Descontrol**: ganan 2 de Fuerza ese turno, pierden 3 de Salud y la Furia vuelve a 5.
+- La Fuerza añade 2 al daño de cada ataque y caduca al terminar el turno del jugador. Si Descontrol ocurre durante el ataque enemigo, beneficia al siguiente turno del jugador. El coste de Salud ignora Bloqueo y puede causar derrota.
 
 ### Vampiros — Sed
 
@@ -65,7 +66,7 @@ Cada personaje empieza con 10 cartas, usando repeticiones para que el mazo sea c
 - **Humanos:** 4 Balas de Plata, 4 Aldeano Valiente, 1 Cruz Sagrada y 1 Antorcha Ardiente.
 - **Hombres Lobo:** 4 Garra Salvaje, 4 Piel Gruesa, 1 Aullido y 1 Pista de Presa.
 - **Vampiros:** 4 Mordisco Vampírico, 4 Velo de Sombras, 1 Sangre Pura y 1 Murciélago Espía.
-- **Fantasmas:** 4 Toque Gélido, 4 Velo Fantasmal, 1 Susurro Espectral y 1 Eco del Pasado.
+- **Fantasmas:** 3 Toque Gélido, 1 Ectoplasma Frío, 4 Velo Fantasmal, 1 Susurro Espectral y 1 Eco del Pasado. Ectoplasma Frío permite generar recurso repetidamente y activar Eco desde el primer combate.
 
 ## Referencia de balance
 
@@ -77,4 +78,3 @@ Una carta común de coste 1 debería aportar aproximadamente uno de estos valore
 - 3 de Bloqueo y un beneficio menor.
 
 Las sinergias pueden superar esa referencia si requieren preparación, consumen un recurso limitado o introducen un riesgo real.
-

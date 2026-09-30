@@ -55,7 +55,8 @@ Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
 Ectoplasma Frío y Cadena Etérea. El catálogo de 40 cartas sigue siendo un
 documento de diseño: todavía no están implementadas todas las cartas,
-las mejoras, los aliados persistentes ni todas las reglas de Furia/Sed.
+las mejoras ni los aliados persistentes. Descontrol y las penalizaciones de Sed
+ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
 
 ## Pruebas de regresión
@@ -94,3 +95,9 @@ esto no constituye una prueba de equilibrio de dificultad.
 
 Pruebas adicionales: `godot --headless --path . --script res://tests/save_tests.gd`.
 Las pruebas usan archivos exclusivos en `.godot/` y no modifican la partida real.
+
+El mazo inicial de Fantasmas incorpora Ectoplasma Frío para poder activar Eco
+del Pasado. Este cambio afecta a nuevas expediciones; los guardados existentes
+conservan su mazo. Puedes consultar las reglas de cada recurso dejando el cursor
+sobre el estado del personaje. Pruebas de estas reglas:
+`godot --headless --path . --script res://tests/faction_tests.gd`.

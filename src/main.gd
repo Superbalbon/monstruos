@@ -27,7 +27,7 @@ const STARTER_DECKS := {
 	"Humanos": ["H001", "H001", "H001", "H001", "H003", "H003", "H003", "H003", "H002", "H007"],
 	"Hombres Lobo": ["L001", "L001", "L001", "L001", "L029", "L029", "L029", "L029", "L002", "L018"],
 	"Vampiros": ["V001", "V001", "V001", "V001", "V007", "V007", "V007", "V007", "V014", "V004"],
-	"Fantasmas": ["F009", "F009", "F009", "F009", "F003", "F003", "F003", "F003", "F001", "F015"]
+	"Fantasmas": ["F009", "F009", "F009", "F004", "F003", "F003", "F003", "F003", "F001", "F015"]
 }
 
 var cards_by_id: Dictionary = {}
@@ -54,6 +54,8 @@ var energy := MAX_ENERGY
 var faction_resource := 0
 var consecrated := 0
 var last_attack_damage := 0
+var temporary_strength := 0
+var player_weak := 0
 
 var enemy_hp := 48
 var enemy_max_hp := 48
@@ -444,6 +446,8 @@ func start_battle(faction: String) -> void:
 	faction_resource = 0
 	consecrated = 0
 	last_attack_damage = 0
+	temporary_strength = 0
+	player_weak = 0
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
 	enemy_weak = 0
@@ -650,7 +654,7 @@ func _play_card(card: Dictionary) -> void:
 		"H007": action_message += _attack(7)
 		"L001": action_message += _attack(6)
 		"L002":
-			faction_resource = mini(10, faction_resource + 2)
+			_gain_fury(2)
 			enemy_weak += 1
 			action_message += "2 de Furia y 1 de Débil."
 		"L018":
@@ -683,19 +687,30 @@ func _play_card(card: Dictionary) -> void:
 	else:
 		discard_pile.append(card)
 	message_label.text = action_message
-	if enemy_hp <= 0:
+	if player_hp <= 0:
+		_finish_battle(false)
+	elif enemy_hp <= 0:
 		_finish_battle(true)
 	else:
 		_refresh_battle()
 
 func _attack(base_damage: int, bonus_damage := 0) -> String:
-	var damage := base_damage + bonus_damage
+	var damage := base_damage + bonus_damage + temporary_strength
 	if consecrated > 0:
 		damage += 3
 		consecrated -= 1
+	if player_weak > 0:
+		damage = maxi(1, floori(damage * 0.75))
 	var dealt := _deal_damage(damage)
 	last_attack_damage = damage
 	return dealt
+
+func _gain_fury(amount: int) -> void:
+	faction_resource = mini(10, faction_resource + amount)
+	if faction_resource == 10:
+		faction_resource = 5
+		player_hp = maxi(0, player_hp - 3)
+		temporary_strength += 2
 
 func _deal_damage(amount: int) -> String:
 	var modified := amount
@@ -762,9 +777,13 @@ func _end_turn() -> void:
 		return
 	discard_pile.append_array(hand)
 	hand.clear()
+	# Expire player-turn effects before resolving the enemy. Descontrol caused
+	# by the enemy therefore remains available for the next player turn.
+	temporary_strength = 0
+	player_weak = maxi(0, player_weak - 1)
 	if enemy_intent_damage == 0:
 		enemy_block += 7
-		message_label.text = "El Desvelado reúne 7 de Bloqueo."
+		message_label.text = "%s reúne 7 de Bloqueo." % encounter_name
 	else:
 		var incoming := enemy_intent_damage
 		if enemy_weak > 0:
@@ -774,8 +793,8 @@ func _end_turn() -> void:
 		var health_damage := incoming - absorbed
 		player_hp -= health_damage
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
-			faction_resource = mini(10, faction_resource + 1)
-		message_label.text = "El Desvelado ataca. Recibes %d de daño." % health_damage
+			_gain_fury(1)
+		message_label.text = "%s ataca. Recibes %d de daño." % [encounter_name, health_damage]
 	if enemy_weak > 0:
 		enemy_weak -= 1
 	if enemy_vulnerable > 0:
@@ -783,6 +802,8 @@ func _end_turn() -> void:
 	if selected_faction == "Vampiros" and faction_resource >= 8:
 		player_hp -= 2
 		message_label.text += " La Sed te causa 2 de daño."
+		if faction_resource == 10:
+			player_weak += 1
 	enemy_pattern += 1
 	enemy_hp = maxi(0, enemy_hp - enemy_bleed)
 	enemy_bleed = maxi(0, enemy_bleed - 1)
@@ -791,7 +812,9 @@ func _end_turn() -> void:
 	elif enemy_hp <= 0:
 		_finish_battle(true)
 	else:
+		var enemy_report := message_label.text
 		_begin_player_turn()
+		message_label.text = enemy_report + " Turno %d." % turn
 
 func _resource_text() -> String:
 	match selected_faction:
@@ -818,6 +841,15 @@ func _card_art_path(card: Dictionary) -> String:
 
 func _refresh_battle() -> void:
 	player_status.text = "♥ %d/%d     ◆ %d     ⚡ %d/%d\n%s" % [maxi(0, player_hp), MAX_HP, player_block, energy, MAX_ENERGY, _resource_text()]
+	if temporary_strength > 0:
+		player_status.text += " · Fuerza +%d" % temporary_strength
+	if player_weak > 0:
+		player_status.text += " · Débil %d" % player_weak
+	player_status.tooltip_text = "Consagración: +3 al siguiente ataque; consume una carga."
+	match selected_faction:
+		"Hombres Lobo": player_status.tooltip_text = "Furia 10: pierde 3 Salud, vuelve a 5 y gana +2 daño de ataque este turno. Si ocurre al recibir un ataque, dura tu próximo turno."
+		"Vampiros": player_status.tooltip_text = "Sed 8–10: pierde 2 Salud al terminar turno. Con 10, el siguiente turno tus ataques causan un 25 % menos de daño."
+		"Fantasmas": player_status.tooltip_text = "Ectoplasma se conserva entre turnos. Eco necesita 2 y un ataque previo este turno."
 	var enemy_states: Array[String] = []
 	if enemy_weak > 0:
 		enemy_states.append("Débil %d" % enemy_weak)
