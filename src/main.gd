@@ -880,23 +880,47 @@ func _card_cost(card: Dictionary) -> int:
 	return maxi(0, cost)
 
 func _can_play(card: Dictionary) -> bool:
-	if battle_over or choosing_card or energy < _card_cost(card):
-		return false
+	return _play_block_reason(card).is_empty()
+
+func _play_block_reason(card: Dictionary) -> String:
+	if battle_over:
+		return "El combate ha terminado."
+	if choosing_card:
+		return "Termina primero la elección del Murciélago Espía."
 	if card["id"] in _active_power_ids():
-		return false
-	if card["id"] == "V008" and (last_enemy_card.is_empty() or last_enemy_card.get("faccion") == "Vampiros"):
-		return false
-	if card["id"] == "F002" and (faction_resource < 2 or possession_active or enemy_intent_damage <= 0):
-		return false
-	if card["id"] == "F008" and (faction_resource < 3 or player_ethereal):
-		return false
-	if card["id"] == "F015" and (faction_resource < 2 or last_attack_card.is_empty()):
-		return false
-	return true
+		return "Este poder ya está activo durante el combate."
+	var reasons: Array[String] = []
+	var cost := _card_cost(card)
+	if energy < cost:
+		reasons.append("Necesitas %d Ímpetu; tienes %d." % [cost, energy])
+	match str(card.id):
+		"V008":
+			if last_enemy_card.is_empty():
+				reasons.append("El enemigo todavía no ha ejecutado ninguna carta que puedas copiar.")
+			elif last_enemy_card.get("faccion") == "Vampiros":
+				reasons.append("La última carta enemiga es vampírica y no puede copiarse.")
+		"F002", "F008", "F015":
+			var needed := 3 if card.id == "F008" else 2
+			if faction_resource < needed:
+				reasons.append("Necesitas %d Ectoplasma; tienes %d." % [needed, faction_resource])
+			if card.id == "F002":
+				if possession_active:
+					reasons.append("Posesión ya está activa; no se acumula.")
+				if enemy_intent_damage <= 0:
+					reasons.append("El enemigo debe anunciar un ataque para usar Posesión.")
+			if card.id == "F008" and player_ethereal:
+				reasons.append("Ya tienes Etéreo; no se acumula.")
+			if card.id == "F015" and last_attack_card.is_empty():
+				reasons.append("Juega primero un Ataque en este turno para repetirlo.")
+	return "\n".join(reasons)
 
 func _play_card(card: Dictionary) -> void:
-	if not hand.has(card) or not _can_play(card):
-		message_label.text = "No puedes jugar esa carta ahora."
+	if not hand.has(card):
+		message_label.text = "Esa carta ya no está en tu mano."
+		return
+	var blocked := _play_block_reason(card)
+	if not blocked.is_empty():
+		message_label.text = blocked.replace("\n", " ")
 		return
 	var paid_cost := _card_cost(card)
 	energy -= paid_cost
@@ -1315,13 +1339,23 @@ func _refresh_battle() -> void:
 
 	for child in hand_box.get_children():
 		child.queue_free()
+	var playable_count := 0
 	for card in hand:
 		var button := CardViewScene.new() as CardView
 		button.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card), _card_cost(card))
-		button.disabled = not _can_play(card)
+		var blocked := _play_block_reason(card)
+		button.disabled = not blocked.is_empty()
+		if button.disabled:
+			button.tooltip_text = "NO DISPONIBLE\n" + blocked + "\n\n" + button.tooltip_text
+		else:
+			playable_count += 1
 		button.pressed.connect(_play_card.bind(card))
 		hand_box.add_child(button)
 	end_turn_button.disabled = battle_over or choosing_card
+	end_turn_button.text = "TERMINAR TURNO" if playable_count > 0 else "TERMINAR TURNO · SIN CARTAS JUGABLES"
+	end_turn_button.tooltip_text = "Descarta tu mano y resuelve la intención enemiga."
+	if playable_count > 0:
+		end_turn_button.tooltip_text += "\nTodavía puedes jugar %d cartas de tu mano (no necesariamente todas con el Ímpetu disponible)." % playable_count
 
 func _finish_battle(victory: bool) -> void:
 	screen = "won" if victory else "lost"
