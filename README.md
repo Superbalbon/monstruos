@@ -87,6 +87,11 @@ esto no constituye una prueba de equilibrio de dificultad.
 
 ## Guardado y consulta del mazo
 
+- **Catálogo de cartas**, en el menú principal y en la ruta, muestra todas las
+  cartas implementadas, sin duplicados y filtradas por facción. Cada carta indica
+  si pertenece al mazo inicial, si se obtiene como recompensa o ambas cosas.
+  Consultarlo no añade cartas ni modifica el guardado. Se cierra con su botón
+  o con **Esc**; las cartas aún pendientes de implementar no aparecen.
 - En combate, **Salir al menú** (o **Esc**) abre una confirmación que explica
   que se reiniciará el encuentro. **Seguir jugando** cancela sin alterar el turno.
 - En la ruta, **Guardar y volver al menú** confirma el guardado antes de salir.
@@ -117,3 +122,6 @@ sobre el estado del personaje. Pruebas de estas reglas:
 
 Pruebas de las nuevas cartas y del ciclo de vida de Barricada:
 `godot --headless --path . --script res://tests/reward_tests.gd`.
+
+Pruebas del catálogo, sus filtros, procedencia de cartas y consulta sin cambios:
+`godot --headless --path . --script res://tests/catalog_tests.gd`.

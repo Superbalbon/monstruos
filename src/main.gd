@@ -175,6 +175,9 @@ func show_title_screen() -> void:
 	start_button.custom_minimum_size = Vector2(0, 58)
 	start_button.pressed.connect(show_faction_selection)
 	content.add_child(start_button)
+	var catalog_button := _make_button("CATÁLOGO DE CARTAS", 21)
+	catalog_button.pressed.connect(_show_catalog)
+	content.add_child(catalog_button)
 	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS) if persistence_enabled else {}
 	if not saved.is_empty() and saved.state != "finished":
 		start_button.text = "NUEVA EXPEDICIÓN"
@@ -244,8 +247,82 @@ func _show_deck() -> void:
 	box.add_child(close)
 	close.grab_focus()
 
+func _show_catalog() -> void:
+	if has_node("CatalogOverlay") or choosing_card:
+		return
+	var overlay := PanelContainer.new()
+	overlay.name = "CatalogOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 20)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+	box.add_child(_make_label("CATÁLOGO · CARTAS JUGABLES", 28, Color("d8bd79")))
+	var explanation := _make_label("Consulta las cartas disponibles. No modifica tu mazo. Las recompensas se eligen tras vencer.", 17)
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(explanation)
+	var filter := OptionButton.new()
+	filter.name = "FactionFilter"
+	for faction in STARTER_DECKS:
+		filter.add_item(faction)
+	box.add_child(filter)
+	var count := _make_label("", 16)
+	count.name = "CardCount"
+	box.add_child(count)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.name = "CatalogGrid"
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	scroll.add_child(grid)
+	filter.item_selected.connect(func(index: int):
+		_fill_catalog(grid, count, filter.get_item_text(index))
+		scroll.scroll_vertical = 0
+	)
+	var factions: Array = STARTER_DECKS.keys()
+	var initial := maxi(0, factions.find(selected_faction))
+	filter.select(initial)
+	_fill_catalog(grid, count, filter.get_item_text(initial))
+	var close := _make_button("CERRAR CATÁLOGO")
+	close.custom_minimum_size.y = 48
+	close.pressed.connect(overlay.queue_free)
+	box.add_child(close)
+	close.grab_focus()
+
+func _fill_catalog(grid: GridContainer, count: Label, faction: String) -> void:
+	for child in grid.get_children():
+		grid.remove_child(child)
+		child.queue_free()
+	var ids: Array[String] = []
+	for id in STARTER_DECKS[faction] + REWARDS[faction]:
+		if id not in ids:
+			ids.append(id)
+	ids.sort()
+	count.text = "%s · %d cartas distintas · mejoras todavía no disponibles" % [faction, ids.size()]
+	for id in ids:
+		var entry := VBoxContainer.new()
+		grid.add_child(entry)
+		var view := CardViewScene.new()
+		view.setup(cards_by_id[id], FACTION_COLORS[faction], _card_art_path(cards_by_id[id]))
+		view.focus_mode = Control.FOCUS_NONE
+		entry.add_child(view)
+		var starter: bool = id in STARTER_DECKS[faction]
+		var reward: bool = id in REWARDS[faction]
+		var source := "Inicial + recompensa" if starter and reward else ("Mazo inicial" if starter else "Solo recompensa")
+		var label := _make_label(source, 15, FACTION_COLORS[faction])
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		entry.add_child(label)
+
 func _request_menu() -> void:
-	if choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay"):
+	if choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
 		return
 	if screen in ["route", "reward"]:
 		_checkpoint(screen)
@@ -275,7 +352,9 @@ func _request_menu() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not event.is_echo():
-		if has_node("DeckOverlay"):
+		if has_node("CatalogOverlay"):
+			get_node("CatalogOverlay").queue_free()
+		elif has_node("DeckOverlay"):
 			get_node("DeckOverlay").queue_free()
 		elif screen in ["battle", "route", "reward"]:
 			_request_menu()
@@ -374,7 +453,14 @@ func show_route() -> void:
 		box.add_child(rest)
 	var deck_button := _make_button("VER MAZO")
 	deck_button.pressed.connect(_show_deck)
-	box.add_child(deck_button)
+	var collection_buttons := HBoxContainer.new()
+	box.add_child(collection_buttons)
+	deck_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	collection_buttons.add_child(deck_button)
+	var catalog_button := _make_button("CATÁLOGO DE CARTAS")
+	catalog_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	catalog_button.pressed.connect(_show_catalog)
+	collection_buttons.add_child(catalog_button)
 	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
 	menu.pressed.connect(_request_menu)
 	box.add_child(menu)
