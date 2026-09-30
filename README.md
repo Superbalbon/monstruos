@@ -127,6 +127,11 @@ esto no constituye una prueba de equilibrio de dificultad.
   las cartas de esa pila, incluidas las copias repetidas. Robo se ordena por nombre
   y no revela el orden real ni altera el barajado. Poderes muestra Barricada cuando
   está activa. Los visores son de solo consulta y se cierran con **Esc** o su botón.
+- **Historial**, junto a las pilas, muestra los últimos 200 eventos del combate:
+  cartas, estados tras jugarlas, intenciones, golpes, absorción por Bloqueo,
+  Descontrol, Sed, Sangrado y resultado. Permite seleccionar y copiar el texto.
+  También puede abrirse tras victoria o derrota, antes de abandonar esa pantalla.
+  Es temporal: se reinicia en cada combate y no forma parte del guardado.
 - El archivo `user://expedicion.json` es local al ordenador, no se sincroniza
   mediante GitHub. En Windows normalmente se encuentra en
   `%APPDATA%/Godot/app_userdata/Monstruos/expedicion.json`.
@@ -153,3 +158,6 @@ Pruebas de patrones, intenciones y ataques múltiples:
 
 Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
 `godot --headless --path . --script res://tests/pile_tests.gd`.
+
+Pruebas del historial, consulta sin cambios y límite de eventos:
+`godot --headless --path . --script res://tests/history_tests.gd`.

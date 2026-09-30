@@ -78,6 +78,8 @@ var enemy_pattern := 0
 var turn := 0
 var battle_over := false
 var choosing_card := false
+const COMBAT_LOG_LIMIT := 200
+var combat_log: Array[String] = []
 
 var player_status: Label
 var enemy_status: Label
@@ -280,6 +282,42 @@ func _show_deck(pile_name := "") -> void:
 		view.focus_mode = Control.FOCUS_NONE
 		grid.add_child(view)
 	var close := _make_button("CERRAR MAZO" if pile_name.is_empty() else "VOLVER AL COMBATE")
+	close.custom_minimum_size.y = 48
+	close.pressed.connect(overlay.queue_free)
+	box.add_child(close)
+	close.grab_focus()
+
+func _log_combat(entry: String) -> void:
+	combat_log.append("[Turno %d] %s" % [turn, entry])
+	if combat_log.size() > COMBAT_LOG_LIMIT:
+		combat_log.pop_front()
+
+func _show_history() -> void:
+	if screen not in ["battle", "won", "lost"] or choosing_card or has_node("DeckOverlay"):
+		return
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 24)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+	box.add_child(_make_label("HISTORIAL · " + encounter_name, 28, Color("d8bd79")))
+	box.add_child(_make_label("Últimos %d eventos del combate actual. No se guardan al salir." % COMBAT_LOG_LIMIT, 17))
+	var entries := RichTextLabel.new()
+	entries.name = "HistoryEntries"
+	entries.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	entries.bbcode_enabled = false
+	entries.selection_enabled = true
+	entries.scroll_following = true
+	entries.add_theme_font_size_override("normal_font_size", 18)
+	box.add_child(entries)
+	entries.text = "\n\n".join(combat_log)
+	var close := _make_button("CERRAR HISTORIAL")
 	close.custom_minimum_size.y = 48
 	close.pressed.connect(overlay.queue_free)
 	box.add_child(close)
@@ -581,6 +619,8 @@ func start_battle(faction: String) -> void:
 	enemy_marked = false
 	enemy_pattern = 0
 	turn = 0
+	combat_log.clear()
+	_log_combat("Comienza el combate contra %s. Salud: %d/%d." % [encounter_name, player_hp, MAX_HP])
 	battle_over = false
 	choosing_card = false
 	_build_battle_screen()
@@ -665,6 +705,10 @@ func _build_battle_screen() -> void:
 		button.pressed.connect(_show_deck.bind(pile_name))
 		piles_row.add_child(button)
 		pile_buttons[pile_name] = button
+	var history_button := _make_button("HISTORIAL", 14)
+	history_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	history_button.pressed.connect(_show_history)
+	piles_row.add_child(history_button)
 
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 276)
@@ -697,6 +741,7 @@ func _begin_player_turn() -> void:
 	_set_enemy_intent()
 	_draw_to_hand(HAND_TARGET)
 	message_label.text = "Turno %d. La criatura revela su intención." % turn
+	_log_combat("Inicio de turno. " + _enemy_intent_text())
 	_refresh_battle()
 
 func _set_enemy_intent() -> void:
@@ -767,6 +812,7 @@ func _play_card(card: Dictionary) -> void:
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V014", "F001", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
+	_log_combat("Juegas %s (coste %d)." % [card["nombre"], int(card["coste"])])
 	# Remove before drawing so this exact instance cannot be selected twice.
 	hand.erase(card)
 
@@ -859,6 +905,8 @@ func _play_card(card: Dictionary) -> void:
 	else:
 		discard_pile.append(card)
 	message_label.text = action_message
+	_log_combat(action_message)
+	_log_combat("Estado: Salud %d, Bloqueo %d, Ímpetu %d, %s. Enemigo: Salud %d, Bloqueo %d, Débil %d, Vulnerable %d, Sangrado %d." % [maxi(0, player_hp), player_block, energy, _resource_text(), enemy_hp, enemy_block, enemy_weak, enemy_vulnerable, enemy_bleed])
 	if player_hp <= 0:
 		_finish_battle(false)
 	elif enemy_hp <= 0:
@@ -883,6 +931,7 @@ func _gain_fury(amount: int) -> void:
 		faction_resource = 5
 		player_hp = maxi(0, player_hp - 3)
 		temporary_strength += 2
+		_log_combat("Descontrol: coste de 3 Salud, Furia vuelve a 5 y Fuerza +2.")
 
 func _deal_damage(amount: int) -> String:
 	var modified := amount
@@ -942,6 +991,7 @@ func _resolve_scout(index: int, choices: Array[Dictionary], overlay: ColorRect) 
 	choosing_card = false
 	overlay.queue_free()
 	message_label.text = "El Murciélago Espía trae %s a tu mano." % chosen["nombre"]
+	_log_combat(message_label.text)
 	_refresh_battle()
 
 func _end_turn() -> void:
@@ -953,6 +1003,7 @@ func _end_turn() -> void:
 	# by the enemy therefore remains available for the next player turn.
 	temporary_strength = 0
 	player_weak = maxi(0, player_weak - 1)
+	_log_combat("Fin del turno del jugador. " + _enemy_intent_text())
 	var total_damage := 0
 	var incoming := _enemy_hit_damage()
 	for hit in enemy_intent_hits:
@@ -963,6 +1014,7 @@ func _end_turn() -> void:
 		var health_damage := incoming - absorbed
 		player_hp -= health_damage
 		total_damage += health_damage
+		_log_combat("Golpe %d/%d: %d de daño, %d absorbido por Bloqueo, pierdes %d Salud." % [hit + 1, enemy_intent_hits, incoming, absorbed, health_damage])
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
 			_gain_fury(1)
 	message_label.text = "%s: recibes %d de daño de ataques." % [encounter_name, total_damage]
@@ -982,9 +1034,13 @@ func _end_turn() -> void:
 		message_label.text += " La Sed te causa 2 de daño."
 		if faction_resource == 10:
 			player_weak += 1
+			message_label.text += " La Sed máxima te aplica 1 Débil."
 	enemy_pattern += 1
+	if enemy_bleed > 0:
+		_log_combat("Sangrado: el enemigo pierde %d Salud." % mini(enemy_hp, enemy_bleed))
 	enemy_hp = maxi(0, enemy_hp - enemy_bleed)
 	enemy_bleed = maxi(0, enemy_bleed - 1)
+	_log_combat(message_label.text)
 	if player_hp <= 0:
 		_finish_battle(false)
 	elif enemy_hp <= 0:
@@ -1078,3 +1134,4 @@ func _finish_battle(victory: bool) -> void:
 		if victory:
 			message_label.text = "VICTORIA · Has llegado a Santa Vigilia y vencido al Custodio."
 		end_turn_button.pressed.connect(show_faction_selection)
+	_log_combat(message_label.text)
