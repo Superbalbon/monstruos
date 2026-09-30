@@ -47,6 +47,7 @@ No requiere complementos ni recursos externos.
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
 se conservan entre encuentros. Tras vencer puedes elegir una de cuatro cartas
+(seis en Fantasmas, accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
@@ -79,6 +80,19 @@ Cada facción dispone también de una cuarta recompensa:
   1 de Vulnerable después del golpe, sin consumir Ectoplasma.
 
 Estas recompensas son compatibles con el formato de guardado existente.
+
+Fantasmas dispone además de dos defensas como recompensa, también visibles en
+el catálogo (no se añaden automáticamente al mazo inicial):
+
+- **Posesión Leve:** 1 Ímpetu y 2 Ectoplasma. Reduce a la mitad cada golpe de la
+  intención actual, después de Débil, redondeando hacia abajo con mínimo 1.
+  Requiere que el enemigo anuncie un ataque y no se acumula consigo misma.
+- **Paso a Través:** 1 Ímpetu y 3 Ectoplasma. Otorga Etéreo y se agota. Evita el
+  siguiente golpe sin consumir Bloqueo, pero no los demás de un ataque múltiple.
+  Se conserva si el enemigo solo se defiende; no se acumula consigo mismo.
+
+Ambos efectos se reinician al comenzar otro combate. La intención refleja la
+reducción por Posesión e indica cuándo Etéreo evitará el primer golpe.
 
 ## Intenciones enemigas
 
@@ -172,3 +186,6 @@ Pruebas del historial, consulta sin cambios y límite de eventos:
 
 Pruebas de la decisión del descanso, cancelación, copia individual y carga:
 `godot --headless --path . --script res://tests/camp_tests.gd`.
+
+Pruebas de Posesión, Etéreo, costes y acceso a recompensas desplazables:
+`godot --headless --path . --script res://tests/ghost_defense_tests.gd`.

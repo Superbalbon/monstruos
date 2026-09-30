@@ -357,7 +357,7 @@
       "tipo": "Habilidad",
       "rareza": "Poco común",
       "coste": 1,
-      "efecto": "Consume 2 de Ectoplasma. Reduce a la mitad el daño de la próxima intención enemiga.",
+      "efecto": "Consume 2 de Ectoplasma. Reduce a la mitad cada golpe de la intención actual (mínimo 1). Requiere un ataque anunciado. No se acumula.",
       "mejora": "Consume 1 de Ectoplasma.",
       "etiquetas": ["Posesión"]
     },
@@ -423,7 +423,7 @@
       "tipo": "Habilidad",
       "rareza": "Rara",
       "coste": 1,
-      "efecto": "Consume 3 de Ectoplasma para obtener Etéreo. Agota.",
+      "efecto": "Consume 3 de Ectoplasma. Etéreo evita el siguiente golpe sin gastar Bloqueo. No se acumula. Agota.",
       "mejora": "Consume 2 de Ectoplasma.",
       "etiquetas": ["Etéreo"]
     },

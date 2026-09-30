@@ -46,7 +46,7 @@ const REWARDS := {
 	"Humanos": ["H004", "H005", "H007", "H010"],
 	"Hombres Lobo": ["L006", "L008", "L002", "L004"],
 	"Vampiros": ["V005", "V006", "V014", "V009"],
-	"Fantasmas": ["F004", "F006", "F001", "F005"]
+	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008"]
 }
 var draw_pile: Array[Dictionary] = []
 var discard_pile: Array[Dictionary] = []
@@ -61,6 +61,8 @@ var consecrated := 0
 var last_attack_damage := 0
 var temporary_strength := 0
 var player_weak := 0
+var possession_active := false
+var player_ethereal := false
 var barricade_active := false
 
 var enemy_hp := 48
@@ -592,9 +594,16 @@ func show_rewards() -> void:
 		return
 	screen = "reward"
 	var box := _journey_panel("ELIGE UNA RECOMPENSA", "Añade una carta a tu mazo para los siguientes encuentros.")
+	box.custom_minimum_size.x = 960
+	if REWARDS[selected_faction].size() > 4:
+		box.add_child(_make_label("Desplaza la barra horizontal para ver todas las recompensas.", 16))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 280
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
-	box.add_child(row)
+	scroll.add_child(row)
 	for id in REWARDS[selected_faction]:
 		var card: Dictionary = cards_by_id[id]
 		var view := CardViewScene.new()
@@ -637,6 +646,8 @@ func start_battle(faction: String) -> void:
 	last_attack_damage = 0
 	temporary_strength = 0
 	player_weak = 0
+	possession_active = false
+	player_ethereal = false
 	barricade_active = false
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
@@ -782,7 +793,8 @@ func _set_enemy_intent() -> void:
 func _enemy_hit_damage() -> int:
 	if enemy_intent_damage <= 0:
 		return 0
-	return maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
+	var damage := maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
+	return maxi(1, floori(damage * 0.5)) if possession_active else damage
 
 func _enemy_intent_text() -> String:
 	var parts: Array[String] = []
@@ -791,6 +803,8 @@ func _enemy_intent_text() -> String:
 		if enemy_intent_hits > 1:
 			attack += " × %d" % enemy_intent_hits
 		parts.append(attack)
+		if player_ethereal:
+			parts.append("Etéreo evitará el primer golpe")
 	if enemy_intent_block > 0:
 		parts.append("ganar %d Bloqueo" % enemy_intent_block)
 	if enemy_intent_weak > 0:
@@ -823,9 +837,9 @@ func _can_play(card: Dictionary) -> bool:
 		return false
 	if card["id"] == "H010" and barricade_active:
 		return false
-	if card["id"] == "F002" and faction_resource < 2:
+	if card["id"] == "F002" and (faction_resource < 2 or possession_active or enemy_intent_damage <= 0):
 		return false
-	if card["id"] == "F008" and faction_resource < 3:
+	if card["id"] == "F008" and (faction_resource < 3 or player_ethereal):
 		return false
 	if card["id"] == "F015" and (faction_resource < 2 or last_attack_damage <= 0):
 		return false
@@ -837,13 +851,21 @@ func _play_card(card: Dictionary) -> void:
 		return
 	energy -= int(card["coste"])
 	var card_id: String = card["id"]
-	var exhausts := card_id in ["L018", "V014", "F001", "F015"]
+	var exhausts := card_id in ["L018", "V014", "F001", "F008", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
 	_log_combat("Juegas %s (coste %d)." % [card["nombre"], int(card["coste"])])
 	# Remove before drawing so this exact instance cannot be selected twice.
 	hand.erase(card)
 
 	match card_id:
+		"F002":
+			faction_resource -= 2
+			possession_active = true
+			action_message += "reduces a la mitad cada golpe de la intención actual."
+		"F008":
+			faction_resource -= 3
+			player_ethereal = true
+			action_message += "Etéreo: evitarás el siguiente golpe. Agota."
 		"H010":
 			barricade_active = true
 			action_message += "conservas el Bloqueo entre turnos durante este combate."
@@ -1036,6 +1058,10 @@ func _end_turn() -> void:
 	for hit in enemy_intent_hits:
 		if incoming == 0 or player_hp <= 0:
 			break
+		if player_ethereal:
+			player_ethereal = false
+			_log_combat("Etéreo evita el golpe %d/%d sin consumir Bloqueo." % [hit + 1, enemy_intent_hits])
+			continue
 		var absorbed := mini(player_block, incoming)
 		player_block -= absorbed
 		var health_damage := incoming - absorbed
@@ -1044,6 +1070,7 @@ func _end_turn() -> void:
 		_log_combat("Golpe %d/%d: %d de daño, %d absorbido por Bloqueo, pierdes %d Salud." % [hit + 1, enemy_intent_hits, incoming, absorbed, health_damage])
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
 			_gain_fury(1)
+	possession_active = false
 	message_label.text = "%s: recibes %d de daño de ataques." % [encounter_name, total_damage]
 	if player_hp > 0:
 		enemy_block += enemy_intent_block
@@ -1106,6 +1133,10 @@ func _refresh_battle() -> void:
 		player_status.text += " · Fuerza +%d" % temporary_strength
 	if player_weak > 0:
 		player_status.text += " · Débil %d" % player_weak
+	if possession_active:
+		player_status.text += " · Posesión"
+	if player_ethereal:
+		player_status.text += " · Etéreo"
 	if barricade_active:
 		player_status.text += " · Barricada"
 	player_status.tooltip_text = "Consagración: +3 al siguiente ataque; consume una carga."

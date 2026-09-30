@@ -36,9 +36,9 @@ func run() -> void:
 		for button in game.find_children("*", "Button", true, false):
 			if button is CardView:
 				visible_cards += 1
-				check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(button.get_global_rect()), "Recompensa dentro de pantalla " + button.card_data.id)
-		check(visible_cards == 4, "Cuatro cartas visibles " + faction)
-		check(game.REWARDS[faction].size() == 4, "Cuatro opciones " + faction)
+				if faction != "Fantasmas":
+					check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(button.get_global_rect()), "Recompensa dentro de pantalla " + button.card_data.id)
+		check(visible_cards == game.REWARDS[faction].size(), "Todas las recompensas renderizadas " + faction)
 		var id: String = game.REWARDS[faction][3]
 		game._take_reward(id)
 		check(id in game.run_deck and game.run_deck.size() == 11, "Nueva recompensa " + id)
