@@ -73,6 +73,12 @@ esto no constituye una prueba de equilibrio de dificultad.
 
 ## Guardado y consulta del mazo
 
+- En combate, **Salir al menú** (o **Esc**) abre una confirmación que explica
+  que se reiniciará el encuentro. **Seguir jugando** cancela sin alterar el turno.
+- En la ruta, **Guardar y volver al menú** confirma el guardado antes de salir.
+- En recompensas, **Guardar y elegir la recompensa más tarde** permite aplazar
+  la elección. La ruta y las recompensas muestran el estado del guardado.
+
 - Se guarda al llegar a la ruta, tras vencer (recompensa pendiente), al elegir
   recompensa y después del descanso. Victoria final y derrota cierran la expedición.
 - Cerrar durante un combate permite reintentarlo desde el punto de control previo,

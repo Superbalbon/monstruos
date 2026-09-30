@@ -241,6 +241,51 @@ func _show_deck() -> void:
 	box.add_child(close)
 	close.grab_focus()
 
+func _request_menu() -> void:
+	if choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay"):
+		return
+	if screen in ["route", "reward"]:
+		_checkpoint(screen)
+		if not save_failed:
+			show_title_screen()
+		return
+	if screen != "battle":
+		show_title_screen()
+		return
+	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS)
+	var can_resume := not save_failed and not saved.is_empty()
+	if can_resume:
+		can_resume = saved.state == "route" and saved.faction == selected_faction and int(saved.stage) == stage and saved.deck == run_deck
+	var dialog := ConfirmationDialog.new()
+	dialog.name = "MenuConfirmation"
+	dialog.title = "Salir del combate"
+	dialog.dialog_text = "La expedición está guardada antes de este combate.\nAl continuar se reiniciará el encuentro con la Salud de entonces.\nLos turnos de este combate no se conservarán."
+	dialog.ok_button_text = "Salir al menú"
+	dialog.cancel_button_text = "Seguir jugando"
+	if not can_resume:
+		dialog.dialog_text = "No hay un guardado válido de este encuentro.\nLa salida se ha cancelado para conservar la partida abierta."
+		dialog.get_ok_button().disabled = true
+	dialog.confirmed.connect(show_title_screen)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(620, 210))
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and not event.is_echo():
+		if has_node("DeckOverlay"):
+			get_node("DeckOverlay").queue_free()
+		elif screen in ["battle", "route", "reward"]:
+			_request_menu()
+		get_viewport().set_input_as_handled()
+
+func _add_save_status(box: VBoxContainer) -> void:
+	var status := "Guardado automático realizado · puedes continuar desde el menú."
+	if save_failed:
+		status = "Guardado pendiente: no se ha podido escribir. Volver al menú reintentará el guardado."
+	var label := _make_label(status, 15, Color("ee6b7a") if save_failed else Color("79d98c"))
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(label)
+
 func show_faction_selection() -> void:
 	_clear_screen()
 	var margin := MarginContainer.new()
@@ -327,10 +372,11 @@ func show_route() -> void:
 	var deck_button := _make_button("VER MAZO")
 	deck_button.pressed.connect(_show_deck)
 	box.add_child(deck_button)
-	var menu := _make_button("VOLVER AL MENÚ · expedición guardada")
-	menu.pressed.connect(show_title_screen)
+	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
+	menu.pressed.connect(_request_menu)
 	box.add_child(menu)
 	_checkpoint("route")
+	_add_save_status(box)
 
 func _enter_stage() -> void:
 	if screen != "route":
@@ -368,6 +414,10 @@ func show_rewards() -> void:
 	skip.pressed.connect(_take_reward.bind(""))
 	box.add_child(skip)
 	_checkpoint("reward")
+	var menu := _make_button("GUARDAR Y ELEGIR LA RECOMPENSA MÁS TARDE")
+	menu.pressed.connect(_request_menu)
+	box.add_child(menu)
+	_add_save_status(box)
 
 func _take_reward(id: String) -> void:
 	if screen != "reward":
@@ -430,6 +480,10 @@ func _build_battle_screen() -> void:
 	var deck_button := _make_button("VER MAZO", 16)
 	deck_button.pressed.connect(_show_deck)
 	header.add_child(deck_button)
+	var menu_button := _make_button("SALIR AL MENÚ", 16)
+	menu_button.tooltip_text = "Al continuar se reiniciará este combate desde el último guardado."
+	menu_button.pressed.connect(_request_menu)
+	header.add_child(menu_button)
 
 	var battlefield := HBoxContainer.new()
 	battlefield.size_flags_vertical = Control.SIZE_EXPAND_FILL

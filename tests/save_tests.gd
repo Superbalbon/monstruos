@@ -29,12 +29,27 @@ func run() -> void:
 		check(other.selected_faction == faction and other.screen == "route", "Carga independiente " + faction)
 		game._enter_stage()
 		game.player_hp = 23
+		game._request_menu()
+		check(game.has_node("MenuConfirmation"), "Confirmación al salir del combate")
+		game.get_node("MenuConfirmation").canceled.emit()
+		await process_frame
+		check(game.screen == "battle" and game.player_hp == 23, "Cancelar mantiene el combate")
+		game._request_menu()
+		game.get_node("MenuConfirmation").confirmed.emit()
+		check(game.screen == "title", "Salida al menú")
 		other._resume_run()
 		check(other.player_hp == 50 and other.stage == 0, "Interrupción de combate")
+		game._resume_run()
+		game._enter_stage()
+		game.player_hp = 23
 		game.enemy_hp = 0
 		game._finish_battle(true)
 		other._resume_run()
 		check(other.screen == "reward" and other.player_hp == 23, "Recompensa pendiente")
+		other._request_menu()
+		check(other.screen == "title", "Salir con recompensa pendiente")
+		other._resume_run()
+		check(other.screen == "reward", "Recuperar recompensa tras salir")
 		other._take_reward(str(other.REWARDS[faction][0]))
 		game._resume_run()
 		check(game.run_deck.size() == 11 and game.stage == 1, "Recompensa persistida")
