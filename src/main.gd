@@ -83,7 +83,7 @@ var player_status: Label
 var enemy_status: Label
 var intent_label: Label
 var message_label: Label
-var piles_label: Label
+var pile_buttons: Dictionary = {}
 var hand_box: HBoxContainer
 var end_turn_button: Button
 var battle_root: VBoxContainer
@@ -224,9 +224,35 @@ func _resume_run() -> void:
 	else:
 		show_route()
 
-func _show_deck() -> void:
+func _show_deck(pile_name := "") -> void:
 	if has_node("DeckOverlay") or choosing_card:
 		return
+	var display_cards: Array[Dictionary] = []
+	var heading := "TU MAZO"
+	var description := "Composición de la expedición; incluye todas las copias."
+	if pile_name.is_empty():
+		for id in run_deck:
+			display_cards.append(cards_by_id[id])
+	else:
+		if screen not in ["battle", "won", "lost"]:
+			return
+		heading = pile_name.to_upper()
+		match pile_name:
+			"Robo":
+				display_cards.assign(draw_pile)
+				description = "Cartas pendientes de robar, ordenadas por nombre. No revela el orden de robo."
+			"Descarte":
+				display_cards.assign(discard_pile)
+				description = "Se barajan para formar la pila de robo cuando esta se queda vacía."
+			"Agotadas":
+				display_cards.assign(exhaust_pile)
+				description = "Fuera de circulación hasta el siguiente combate."
+			"Poderes":
+				if barricade_active:
+					display_cards.append(cards_by_id["H010"])
+				description = "Efectos persistentes activos durante este combate. No vuelven a las pilas."
+			_: return
+		display_cards.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.nombre) < str(b.nombre))
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -234,8 +260,12 @@ func _show_deck() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
 	overlay.add_child(box)
-	box.add_child(_make_label("TU MAZO · %d cartas" % run_deck.size(), 28, Color("d8bd79")))
-	box.add_child(_make_label("Composición de la expedición; incluye todas las copias.", 18))
+	box.add_child(_make_label("%s · %d cartas" % [heading, display_cards.size()], 28, Color("d8bd79")))
+	var explanation := _make_label(description, 18)
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(explanation)
+	if display_cards.is_empty():
+		box.add_child(_make_label("No hay cartas en esta pila.", 20))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(scroll)
@@ -244,12 +274,12 @@ func _show_deck() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
-	for id in run_deck:
+	for card in display_cards:
 		var view := CardViewScene.new()
-		view.setup(cards_by_id[id], FACTION_COLORS[selected_faction], _card_art_path(cards_by_id[id]))
+		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
 		view.focus_mode = Control.FOCUS_NONE
 		grid.add_child(view)
-	var close := _make_button("CERRAR MAZO")
+	var close := _make_button("CERRAR MAZO" if pile_name.is_empty() else "VOLVER AL COMBATE")
 	close.custom_minimum_size.y = 48
 	close.pressed.connect(overlay.queue_free)
 	box.add_child(close)
@@ -624,9 +654,17 @@ func _build_battle_screen() -> void:
 	message_label = _make_label("", 17, Color("cbd2df"))
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	battle_root.add_child(message_label)
-	piles_label = _make_label("", 14, Color("929bad"))
-	piles_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	battle_root.add_child(piles_label)
+	var piles_row := HBoxContainer.new()
+	piles_row.add_theme_constant_override("separation", 10)
+	battle_root.add_child(piles_row)
+	pile_buttons.clear()
+	for pile_name in ["Robo", "Descarte", "Agotadas", "Poderes"]:
+		var button := _make_button("", 14)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.tooltip_text = "Consultar cartas: " + pile_name
+		button.pressed.connect(_show_deck.bind(pile_name))
+		piles_row.add_child(button)
+		pile_buttons[pile_name] = button
 
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 276)
@@ -1004,9 +1042,10 @@ func _refresh_battle() -> void:
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
 	intent_label.text = _enemy_intent_text()
-	piles_label.text = "Mazo %d  ·  Descarte %d  ·  Agotadas %d" % [draw_pile.size(), discard_pile.size(), exhaust_pile.size()]
-	if barricade_active:
-		piles_label.text += "  ·  Poderes activos 1"
+	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": int(barricade_active)}
+	for pile_name in pile_counts:
+		pile_buttons[pile_name].text = "%s · %d" % [pile_name.to_upper(), pile_counts[pile_name]]
+		pile_buttons[pile_name].disabled = choosing_card
 
 	for child in hand_box.get_children():
 		child.queue_free()

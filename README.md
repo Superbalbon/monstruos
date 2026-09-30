@@ -123,6 +123,10 @@ esto no constituye una prueba de equilibrio de dificultad.
 - `Continuar` restaura facción, Salud, etapa y mazo. Elegir estirpe para una nueva
   expedición sustituye la anterior, tal como indica el menú.
 - `Ver mazo` muestra todas las copias de la expedición desde la ruta y el combate.
+- En combate, pulsa **Robo**, **Descarte**, **Agotadas** o **Poderes** para consultar
+  las cartas de esa pila, incluidas las copias repetidas. Robo se ordena por nombre
+  y no revela el orden real ni altera el barajado. Poderes muestra Barricada cuando
+  está activa. Los visores son de solo consulta y se cierran con **Esc** o su botón.
 - El archivo `user://expedicion.json` es local al ordenador, no se sincroniza
   mediante GitHub. En Windows normalmente se encuentra en
   `%APPDATA%/Godot/app_userdata/Monstruos/expedicion.json`.
@@ -146,3 +150,6 @@ Pruebas del catálogo, sus filtros, procedencia de cartas y consulta sin cambios
 
 Pruebas de patrones, intenciones y ataques múltiples:
 `godot --headless --path . --script res://tests/enemy_tests.gd`.
+
+Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
+`godot --headless --path . --script res://tests/pile_tests.gd`.
