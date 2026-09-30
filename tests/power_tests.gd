@@ -27,7 +27,7 @@ func run() -> void:
 	root.add_child(game)
 	for faction in ["Humanos", "Hombres Lobo", "Vampiros"]:
 		battle(faction)
-		var id: String = game.REWARDS[faction][-1]
+		var id: String = {"Humanos": "H008", "Hombres Lobo": "L007", "Vampiros": "V002"}[faction]
 		play(id)
 		check(id in game.active_powers, "Poder activo " + id)
 		game.energy = 3

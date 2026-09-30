@@ -3,11 +3,13 @@ extends Button
 
 var card_data: Dictionary
 
-func setup(card: Dictionary, faction_color: Color, art_path: String) -> void:
+func setup(card: Dictionary, faction_color: Color, art_path: String, current_cost := -1) -> void:
 	card_data = card
 	text = ""
 	custom_minimum_size = Vector2(218, 258)
 	tooltip_text = "Mejora: " + str(card["mejora"])
+	if current_cost >= 0 and current_cost != int(card["coste"]):
+		tooltip_text = "Coste actual: %d (base: %d).\n" % [current_cost, int(card["coste"])] + tooltip_text
 	clip_contents = true
 	_build_styles(faction_color)
 
@@ -37,8 +39,9 @@ func setup(card: Dictionary, faction_color: Color, art_path: String) -> void:
 	name_label.add_theme_color_override("font_color", faction_color.lightened(0.25))
 	header.add_child(name_label)
 	var cost_label := Label.new()
+	cost_label.name = "CostLabel"
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cost_label.text = "%d⚡" % int(card["coste"])
+	cost_label.text = "%d⚡" % (current_cost if current_cost >= 0 else int(card["coste"]))
 	cost_label.add_theme_font_size_override("font_size", 15)
 	cost_label.add_theme_color_override("font_color", Color("ffd166"))
 	header.add_child(cost_label)
@@ -111,4 +114,3 @@ func _build_styles(faction_color: Color) -> void:
 	disabled.bg_color = Color("0b0d12")
 	disabled.border_color = Color(faction_color, 0.22)
 	add_theme_stylebox_override("disabled", disabled)
-

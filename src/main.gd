@@ -44,7 +44,7 @@ const ENEMY_PATTERNS := {
 }
 const REWARDS := {
 	"Humanos": ["H004", "H005", "H007", "H010", "H008"],
-	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007"],
+	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007", "L005"],
 	"Vampiros": ["V005", "V006", "V014", "V009", "V002"],
 	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008"]
 }
@@ -67,6 +67,7 @@ var barricade_active := false
 var active_powers: Array[String] = []
 var hunter_triggered := false
 var mist_triggered := false
+var pack_played := false
 
 var enemy_hp := 48
 var enemy_max_hp := 48
@@ -778,6 +779,7 @@ func _protagonist_name() -> String:
 
 func _begin_player_turn() -> void:
 	turn += 1
+	pack_played = false
 	hunter_triggered = false
 	mist_triggered = false
 	if not barricade_active:
@@ -847,8 +849,14 @@ func _ensure_draw_card() -> bool:
 		draw_pile.shuffle()
 	return true
 
+func _card_cost(card: Dictionary) -> int:
+	var cost := int(card["coste"])
+	if card["id"] == "L005" and pack_played:
+		cost -= 1
+	return maxi(0, cost)
+
 func _can_play(card: Dictionary) -> bool:
-	if battle_over or choosing_card or energy < int(card["coste"]):
+	if battle_over or choosing_card or energy < _card_cost(card):
 		return false
 	if card["id"] in _active_power_ids():
 		return false
@@ -864,15 +872,27 @@ func _play_card(card: Dictionary) -> void:
 	if not _can_play(card):
 		message_label.text = "No puedes jugar esa carta ahora."
 		return
-	energy -= int(card["coste"])
+	var paid_cost := _card_cost(card)
+	energy -= paid_cost
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V014", "F001", "F008", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
-	_log_combat("Juegas %s (coste %d)." % [card["nombre"], int(card["coste"])])
+	_log_combat("Juegas %s (coste %d)." % [card["nombre"], paid_cost])
 	# Remove before drawing so this exact instance cannot be selected twice.
 	hand.erase(card)
+	if "Manada" in card.get("etiquetas", []):
+		pack_played = true
 
 	match card_id:
+		"L005":
+			var hits: Array[String] = []
+			for hit in 3:
+				if enemy_hp <= 0:
+					break
+				var result := _attack(4)
+				hits.append(result)
+				_log_combat("Manada Feroz · golpe %d: %s" % [hit + 1, result])
+			action_message += " / ".join(hits)
 		"H008", "L007", "V002":
 			active_powers.append(card_id)
 			action_message += "poder activo durante este combate."
@@ -1203,7 +1223,7 @@ func _refresh_battle() -> void:
 		child.queue_free()
 	for card in hand:
 		var button := CardViewScene.new() as CardView
-		button.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
+		button.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card), _card_cost(card))
 		button.disabled = not _can_play(card)
 		button.pressed.connect(_play_card.bind(card))
 		hand_box.add_child(button)

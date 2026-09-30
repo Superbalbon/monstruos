@@ -41,8 +41,9 @@ func run() -> void:
 			game.enemy_weak = 0
 			game.enemy_bleed = 0
 			game.faction_resource = 3
+			var expected_cost: int = game._card_cost(card)
 			game._play_card(card)
-			check(game.energy == 3 - int(card.coste), "Coste " + id)
+			check(game.energy == 3 - expected_cost, "Coste " + id)
 			match id:
 				"H004": check(game.enemy_hp == 97 and game.enemy_vulnerable == 2, id)
 				"H005": check(game.enemy_weak == 1, id)

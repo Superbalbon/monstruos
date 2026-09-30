@@ -47,7 +47,7 @@ No requiere complementos ni recursos externos.
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
 se conservan entre encuentros. Tras vencer puedes elegir una de cinco cartas
-(seis en Fantasmas, accesibles con la barra horizontal)
+(seis en Fantasmas y Hombres Lobo, accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
@@ -108,6 +108,13 @@ Hay tres poderes adicionales como quinta recompensa de sus facciones:
 Estos poderes salen de las pilas al jugarse, aparecen en **Poderes** y en el
 historial, y no admiten otra copia activa simultáneamente. Sus cartas vuelven
 al mazo en el siguiente combate, pero hay que activarlas de nuevo.
+
+**Manada Feroz** es la sexta recompensa de Hombres Lobo: inflige 4 de daño tres
+veces. Cuesta 2 Ímpetu, o 1 si ya jugaste una carta con etiqueta Manada ese turno
+(por ejemplo, Aullido u otra Manada Feroz). La mano muestra el coste real sin
+alterar los datos base; el descuento se reinicia cada turno. Fuerza, Débil y
+Vulnerable se calculan por golpe, el Bloqueo se consume entre golpes y el ataque
+se detiene si el enemigo muere. No se añade automáticamente al mazo inicial.
 
 ## Intenciones enemigas
 
@@ -207,3 +214,6 @@ Pruebas de Posesión, Etéreo, costes y acceso a recompensas desplazables:
 
 Pruebas de poderes persistentes, activación una vez por turno y reinicio:
 `godot --headless --path . --script res://tests/power_tests.gd`.
+
+Pruebas de Manada Feroz, coste dinámico visible y ataques múltiples del jugador:
+`godot --headless --path . --script res://tests/pack_tests.gd`.
