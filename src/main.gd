@@ -36,7 +36,12 @@ var run_deck: Array[String] = []
 var stage := 0
 var screen := "title"
 var encounter_name := "EL DESVELADO"
-var encounter_bonus := 0
+const ENEMY_PATTERNS := {
+	0: [{"damage": 7}, {"damage": 10}, {"block": 7}, {"damage": 13}],
+	1: [{"damage": 4, "hits": 2}, {"block": 4}, {"damage": 12}],
+	2: [{"damage": 8, "block": 4}, {"block": 10}, {"damage": 14}],
+	4: [{"damage": 9}, {"block": 8, "weak": 1}, {"damage": 6, "hits": 2}, {"damage": 16}]
+}
 const REWARDS := {
 	"Humanos": ["H004", "H005", "H007", "H010"],
 	"Hombres Lobo": ["L006", "L008", "L002", "L004"],
@@ -66,6 +71,9 @@ var enemy_bleed := 0
 var enemy_vulnerable := 0
 var enemy_marked := false
 var enemy_intent_damage := 0
+var enemy_intent_hits := 1
+var enemy_intent_block := 0
+var enemy_intent_weak := 0
 var enemy_pattern := 0
 var turn := 0
 var battle_over := false
@@ -474,7 +482,6 @@ func _enter_stage() -> void:
 		_rest(15)
 		return
 	encounter_name = str({0: "EL DESVELADO", 1: "EL ACECHADOR", 2: "EL GUARDAGUJAS", 4: "EL CUSTODIO"}.get(stage, "EL DESVELADO"))
-	encounter_bonus = 2 if stage == 4 else (1 if stage == 2 else 0)
 	enemy_max_hp = int({0: 36, 1: 40, 2: 44, 4: 58}.get(stage, 36))
 	start_battle(selected_faction)
 
@@ -611,6 +618,7 @@ func _build_battle_screen() -> void:
 	enemy_box.add_child(enemy_status)
 	intent_label = _make_label("", 18, Color("f0c36a"))
 	intent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	intent_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	enemy_box.add_child(intent_label)
 
 	message_label = _make_label("", 17, Color("cbd2df"))
@@ -654,13 +662,30 @@ func _begin_player_turn() -> void:
 	_refresh_battle()
 
 func _set_enemy_intent() -> void:
-	match enemy_pattern % 4:
-		0: enemy_intent_damage = 7
-		1: enemy_intent_damage = 10
-		2: enemy_intent_damage = 0
-		_: enemy_intent_damage = 13
+	var pattern: Array = ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0])
+	var action: Dictionary = pattern[enemy_pattern % pattern.size()]
+	enemy_intent_damage = int(action.get("damage", 0))
+	enemy_intent_hits = int(action.get("hits", 1))
+	enemy_intent_block = int(action.get("block", 0))
+	enemy_intent_weak = int(action.get("weak", 0))
+
+func _enemy_hit_damage() -> int:
+	if enemy_intent_damage <= 0:
+		return 0
+	return maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
+
+func _enemy_intent_text() -> String:
+	var parts: Array[String] = []
 	if enemy_intent_damage > 0:
-		enemy_intent_damage += encounter_bonus
+		var attack := "atacar por %d" % _enemy_hit_damage()
+		if enemy_intent_hits > 1:
+			attack += " × %d" % enemy_intent_hits
+		parts.append(attack)
+	if enemy_intent_block > 0:
+		parts.append("ganar %d Bloqueo" % enemy_intent_block)
+	if enemy_intent_weak > 0:
+		parts.append("aplicar %d Débil" % enemy_intent_weak)
+	return "Intención: " + " · ".join(parts)
 
 func _draw_to_hand(target_size: int) -> void:
 	while hand.size() < target_size:
@@ -890,20 +915,26 @@ func _end_turn() -> void:
 	# by the enemy therefore remains available for the next player turn.
 	temporary_strength = 0
 	player_weak = maxi(0, player_weak - 1)
-	if enemy_intent_damage == 0:
-		enemy_block += 7
-		message_label.text = "%s reúne 7 de Bloqueo." % encounter_name
-	else:
-		var incoming := enemy_intent_damage
-		if enemy_weak > 0:
-			incoming = maxi(1, floori(incoming * 0.75))
+	var total_damage := 0
+	var incoming := _enemy_hit_damage()
+	for hit in enemy_intent_hits:
+		if incoming == 0 or player_hp <= 0:
+			break
 		var absorbed := mini(player_block, incoming)
 		player_block -= absorbed
 		var health_damage := incoming - absorbed
 		player_hp -= health_damage
+		total_damage += health_damage
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
 			_gain_fury(1)
-		message_label.text = "%s ataca. Recibes %d de daño." % [encounter_name, health_damage]
+	message_label.text = "%s: recibes %d de daño de ataques." % [encounter_name, total_damage]
+	if player_hp > 0:
+		enemy_block += enemy_intent_block
+		player_weak += enemy_intent_weak
+		if enemy_intent_block > 0:
+			message_label.text += " Gana %d Bloqueo." % enemy_intent_block
+		if enemy_intent_weak > 0:
+			message_label.text += " Te aplica %d Débil." % enemy_intent_weak
 	if enemy_weak > 0:
 		enemy_weak -= 1
 	if enemy_vulnerable > 0:
@@ -972,8 +1003,7 @@ func _refresh_battle() -> void:
 		enemy_states.append("Sangrado %d" % enemy_bleed)
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
-	var shown_damage := maxi(1, floori(enemy_intent_damage * 0.75)) if enemy_weak > 0 else enemy_intent_damage
-	intent_label.text = "Intención: defenderse" if enemy_intent_damage == 0 else "Intención: atacar por %d" % shown_damage
+	intent_label.text = _enemy_intent_text()
 	piles_label.text = "Mazo %d  ·  Descarte %d  ·  Agotadas %d" % [draw_pile.size(), discard_pile.size(), exhaust_pile.size()]
 	if barricade_active:
 		piles_label.text += "  ·  Poderes activos 1"

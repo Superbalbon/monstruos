@@ -72,6 +72,24 @@ Cada facción dispone también de una cuarta recompensa:
 
 Estas recompensas son compatibles con el formato de guardado existente.
 
+## Intenciones enemigas
+
+Cada encuentro tiene su propio ciclo, que se repite en este orden:
+
+| Enemigo | Ciclo de acciones |
+|---|---|
+| Desvelado | Ataque 7 → ataque 10 → Bloqueo 7 → ataque 13 |
+| Acechador | Dos golpes de 4 → Bloqueo 4 → ataque 12 |
+| Guardagujas | Ataque 8 y Bloqueo 4 → Bloqueo 10 → ataque 14 |
+| Custodio | Ataque 9 → Bloqueo 8 y 1 Débil → dos golpes de 6 → ataque 16 |
+
+La intención muestra todos los efectos antes de resolverlos. Débil reduce cada
+golpe un 25 % (redondeado hacia abajo), y el Bloqueo disponible se consume entre
+golpes. Un hombre lobo obtiene Furia por cada golpe que le quite Salud. El Débil
+del Custodio afecta al siguiente turno del jugador. Los ataques cesan al morir.
+El balance de estos patrones es provisional; las pruebas verifican sus reglas,
+no garantizan una dificultad equilibrada para todas las facciones.
+
 ## Pruebas de regresión
 
 Con Godot accesible en consola:
@@ -125,3 +143,6 @@ Pruebas de las nuevas cartas y del ciclo de vida de Barricada:
 
 Pruebas del catálogo, sus filtros, procedencia de cartas y consulta sin cambios:
 `godot --headless --path . --script res://tests/catalog_tests.gd`.
+
+Pruebas de patrones, intenciones y ataques múltiples:
+`godot --headless --path . --script res://tests/enemy_tests.gd`.
