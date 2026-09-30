@@ -2,13 +2,13 @@
 
 ## Reglas base del prototipo
 
-- El jugador comienza cada combate con **50 de Salud**.
+- El jugador comienza la expedición con **50 de Salud** máxima y conserva la Salud entre encuentros.
 - Al inicio de cada turno obtiene **3 de Ímpetu** y roba hasta tener **5 cartas**.
-- Las cartas jugadas van al descarte, salvo las cartas con **Agotar**.
+- Las cartas jugadas van al descarte, salvo **Agotar**, poderes y aliados. Estos últimos permanecen activos hasta acabar el combate.
 - Cuando el mazo se vacía, el descarte se baraja y forma un mazo nuevo.
-- El **Bloqueo** absorbe daño y desaparece al comenzar el turno del jugador.
+- El **Bloqueo** absorbe daño y desaparece al comenzar el turno del jugador, salvo con Barricada activa.
 - Cada enemigo muestra su siguiente intención: ataque, defensa, estado o acción especial.
-- Una carta solo puede mejorarse una vez durante la partida.
+- Las 40 cartas base están implementadas. Las mejoras son propuestas de diseño y todavía no pueden adquirirse.
 
 Estos valores son un punto de partida para pruebas, no cifras definitivas.
 
@@ -19,8 +19,8 @@ Estos valores son un punto de partida para pruebas, no cifras definitivas.
 | Vulnerable | Recibe un 50 % más de daño de ataques durante sus cargas. Cada turno pierde una carga. |
 | Débil | Inflige un 25 % menos de daño de ataques durante sus cargas. Cada turno pierde una carga. |
 | Sangrado | Al terminar su turno recibe daño igual a las cargas y después pierde una carga. |
-| Consagrado | La siguiente carta de ataque u objeto obtiene el efecto adicional indicado. |
-| Etéreo | Evita todo el daño del próximo ataque recibido y después se elimina. |
+| Consagración | Cada carga añade 3 al siguiente golpe de ataque y se consume. |
+| Etéreo | Evita el siguiente golpe recibido sin consumir Bloqueo y después se elimina; no evita todos los golpes de un ataque múltiple. Antorcha lo elimina antes de golpear. |
 | Marcado | Activa efectos de Caza. Solo puede haber un objetivo marcado por el jugador. |
 
 Los porcentajes se redondean hacia abajo, con un mínimo de 1 cuando el ataque original causaría daño.
@@ -57,9 +57,9 @@ Los Humanos no tienen un medidor adicional. Sus cartas generan **Consagración**
 - **Ataque:** causa daño directamente.
 - **Habilidad:** defensa, control, robo o manipulación de recursos.
 - **Poder:** efecto pasivo para el resto del combate; se retira del mazo tras jugarlo.
-- **Aliado:** permanece en juego y activa una habilidad una vez por turno.
+- **Aliado:** permanece en juego; el momento de su efecto depende de la carta. Milicia actúa al terminar tu turno, Héroe responde una vez por turno a pérdida de Salud por ataque enemigo y Espía solo selecciona cartas al entrar. Se admiten copias y cuentan para Milicia y Lobo Solitario.
 
-## Mazos iniciales propuestos
+## Mazos iniciales
 
 Cada personaje empieza con 10 cartas, usando repeticiones para que el mazo sea comprensible:
 

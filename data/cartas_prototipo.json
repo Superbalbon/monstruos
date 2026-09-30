@@ -68,7 +68,7 @@
       "tipo": "Aliado",
       "rareza": "Rara",
       "coste": 2,
-      "efecto": "Al final de tu turno, obtén 3 de Bloqueo por cada Aliado en juego.",
+      "efecto": "Permanece en juego. Al final de tu turno, obtén 3 de Bloqueo por cada Aliado (incluye esta Milicia).",
       "mejora": "Cuesta 1.",
       "etiquetas": ["Milicia", "Comunidad"]
     },
@@ -101,7 +101,7 @@
       "tipo": "Aliado",
       "rareza": "Rara",
       "coste": 2,
-      "efecto": "Al jugarlo, obtén 8 de Bloqueo. La primera vez que pierdas Salud cada turno, inflige 4 de daño al atacante.",
+      "efecto": "Permanece en juego. Obtén 8 de Bloqueo. La primera vez que un ataque te quite Salud cada turno, causa 4 de daño al atacante.",
       "mejora": "Obtén 12 de Bloqueo al jugarlo.",
       "etiquetas": ["Comunidad"]
     },
@@ -146,7 +146,7 @@
       "tipo": "Poder",
       "rareza": "Rara",
       "coste": 2,
-      "efecto": "La primera carta de Manada que juegues cada turno cuesta 1 menos.",
+      "efecto": "La primera carta de Manada de cada turno cuesta 1 menos (mínimo 0). Este Alfa cuenta como Manada al jugarlo.",
       "mejora": "Cuesta 1.",
       "etiquetas": ["Alfa", "Manada"]
     },
@@ -268,7 +268,7 @@
       "tipo": "Aliado",
       "rareza": "Común",
       "coste": 1,
-      "efecto": "Muestra las dos próximas cartas del mazo. Elige una para robar y devuelve la otra arriba.",
+      "efecto": "Al jugarlo, mira las dos próximas cartas. Roba una y devuelve la otra arriba. Permanece como Aliado, sin repetir el efecto.",
       "mejora": "Mira tres cartas y elige una.",
       "etiquetas": ["Murciélago", "Nobleza"]
     },
@@ -312,7 +312,7 @@
       "tipo": "Habilidad",
       "rareza": "Rara",
       "coste": 2,
-      "efecto": "Crea en tu mano una copia temporal de la última carta no vampírica usada por un enemigo. Cuesta 1 menos. Agota.",
+      "efecto": "Copia en tu mano la última carta no vampírica ejecutada por el enemigo. La copia cuesta 1 menos y dura este combate. Agota.",
       "mejora": "La copia cuesta 2 menos.",
       "etiquetas": ["Conversión"]
     },
@@ -445,7 +445,7 @@
       "tipo": "Habilidad",
       "rareza": "Rara",
       "coste": 1,
-      "efecto": "Consume 2 de Ectoplasma. Repite la última carta de Ataque jugada este turno al 50 % de potencia. Agota.",
+      "efecto": "Consume 2 de Ectoplasma. Repite el último Ataque de este turno al 50 % (redondea abajo, mínimo 1 por efecto positivo). Agota.",
       "mejora": "La repite al 75 % de potencia.",
       "etiquetas": ["Eco", "Memoria"]
     }

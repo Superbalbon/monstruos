@@ -85,7 +85,7 @@ func run() -> void:
 	play("F004")
 	check(game.faction_resource == 2 and game._can_play(game.cards_by_id["F015"]), "Eco disponible con cartas iniciales")
 	play("F015")
-	check(game.enemy_hp == 94 and game.faction_resource == 0, "Eco repite mitad del daño y consume recurso")
+	check(game.enemy_hp == 94 and game.faction_resource == 1, "Eco repite daño y generación de Ectoplasma")
 	check(game.exhaust_pile.size() == 2, "Susurro y Eco se agotan")
 	game.queue_free()
 	await process_frame

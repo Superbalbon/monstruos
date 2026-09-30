@@ -60,6 +60,7 @@ func run() -> void:
 	check("8 Bloqueo" in game.intent_label.text and "1 Débil" in game.intent_label.text, "Custodio anuncia ambos efectos")
 	game._end_turn()
 	game.enemy_block = 0
+	game.enemy_ethereal = false # Isolate Weak; ethereal is covered by completion tests.
 	var card: Dictionary = game.cards_by_id["H001"].duplicate(true)
 	game.hand.append(card)
 	game._play_card(card)

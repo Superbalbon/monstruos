@@ -40,13 +40,13 @@ const ENEMY_PATTERNS := {
 	0: [{"damage": 7}, {"damage": 10}, {"block": 7}, {"damage": 13}],
 	1: [{"damage": 4, "hits": 2}, {"block": 4}, {"damage": 12}],
 	2: [{"damage": 8, "block": 4}, {"block": 10}, {"damage": 14}],
-	4: [{"damage": 9}, {"block": 8, "weak": 1}, {"damage": 6, "hits": 2}, {"damage": 16}]
+	4: [{"damage": 9}, {"block": 8, "weak": 1, "ethereal": true}, {"damage": 6, "hits": 2}, {"damage": 16}]
 }
 const REWARDS := {
-	"Humanos": ["H004", "H005", "H007", "H010", "H008"],
-	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007", "L005"],
-	"Vampiros": ["V005", "V006", "V014", "V009", "V002", "V003"],
-	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008"]
+	"Humanos": ["H004", "H005", "H007", "H010", "H008", "H006", "H009"],
+	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007", "L005", "L003"],
+	"Vampiros": ["V005", "V006", "V014", "V009", "V002", "V003", "V008"],
+	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008", "F007"]
 }
 var draw_pile: Array[Dictionary] = []
 var discard_pile: Array[Dictionary] = []
@@ -59,6 +59,7 @@ var energy := MAX_ENERGY
 var faction_resource := 0
 var consecrated := 0
 var last_attack_damage := 0
+var last_attack_card: Dictionary = {}
 var temporary_strength := 0
 var player_weak := 0
 var possession_active := false
@@ -69,6 +70,10 @@ var hunter_triggered := false
 var mist_triggered := false
 var thirst_triggered := false
 var pack_played := false
+var allies: Array[Dictionary] = []
+var hero_triggered := false
+var last_enemy_card: Dictionary = {}
+var enemy_ethereal := false
 
 var enemy_hp := 48
 var enemy_max_hp := 48
@@ -81,6 +86,7 @@ var enemy_intent_damage := 0
 var enemy_intent_hits := 1
 var enemy_intent_block := 0
 var enemy_intent_weak := 0
+var enemy_intent_ethereal := false
 var enemy_pattern := 0
 var turn := 0
 var battle_over := false
@@ -265,6 +271,9 @@ func _show_deck(pile_name := "", remove_at_camp := false) -> void:
 				for id in _active_power_ids():
 					display_cards.append(cards_by_id[id])
 				description = "Efectos persistentes activos durante este combate. No vuelven a las pilas."
+			"Aliados":
+				display_cards.assign(allies)
+				description = "Cada copia permanece hasta terminar el combate. Sus efectos se acumulan."
 			_: return
 		display_cards.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.nombre) < str(b.nombre))
 	var overlay := PanelContainer.new()
@@ -649,12 +658,17 @@ func start_battle(faction: String) -> void:
 	faction_resource = 0
 	consecrated = 0
 	last_attack_damage = 0
+	last_attack_card.clear()
 	temporary_strength = 0
 	player_weak = 0
 	possession_active = false
 	player_ethereal = false
 	barricade_active = false
 	active_powers.clear()
+	allies.clear()
+	hero_triggered = false
+	last_enemy_card.clear()
+	enemy_ethereal = false
 	hunter_triggered = false
 	mist_triggered = false
 	thirst_triggered = false
@@ -745,7 +759,7 @@ func _build_battle_screen() -> void:
 	piles_row.add_theme_constant_override("separation", 10)
 	battle_root.add_child(piles_row)
 	pile_buttons.clear()
-	for pile_name in ["Robo", "Descarte", "Agotadas", "Poderes"]:
+	for pile_name in ["Robo", "Descarte", "Agotadas", "Poderes", "Aliados"]:
 		var button := _make_button("", 14)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.tooltip_text = "Consultar cartas: " + pile_name
@@ -781,6 +795,7 @@ func _protagonist_name() -> String:
 
 func _begin_player_turn() -> void:
 	turn += 1
+	hero_triggered = false
 	pack_played = false
 	hunter_triggered = false
 	mist_triggered = false
@@ -789,6 +804,7 @@ func _begin_player_turn() -> void:
 		player_block = 0
 	energy = MAX_ENERGY
 	last_attack_damage = 0
+	last_attack_card.clear()
 	_set_enemy_intent()
 	if "L007" in active_powers:
 		temporary_strength += 1
@@ -809,6 +825,7 @@ func _set_enemy_intent() -> void:
 	enemy_intent_hits = int(action.get("hits", 1))
 	enemy_intent_block = int(action.get("block", 0))
 	enemy_intent_weak = int(action.get("weak", 0))
+	enemy_intent_ethereal = bool(action.get("ethereal", false))
 
 func _enemy_hit_damage() -> int:
 	if enemy_intent_damage <= 0:
@@ -829,6 +846,8 @@ func _enemy_intent_text() -> String:
 		parts.append("ganar %d Bloqueo" % enemy_intent_block)
 	if enemy_intent_weak > 0:
 		parts.append("aplicar %d Débil" % enemy_intent_weak)
+	if enemy_intent_ethereal:
+		parts.append("obtener Etéreo")
 	return "Intención: " + " · ".join(parts)
 
 func _draw_to_hand(target_size: int) -> void:
@@ -856,6 +875,8 @@ func _card_cost(card: Dictionary) -> int:
 	var cost := int(card["coste"])
 	if card["id"] == "L005" and pack_played:
 		cost -= 1
+	if "L003" in active_powers and not pack_played and "Manada" in card.get("etiquetas", []):
+		cost -= 1
 	return maxi(0, cost)
 
 func _can_play(card: Dictionary) -> bool:
@@ -863,22 +884,24 @@ func _can_play(card: Dictionary) -> bool:
 		return false
 	if card["id"] in _active_power_ids():
 		return false
+	if card["id"] == "V008" and (last_enemy_card.is_empty() or last_enemy_card.get("faccion") == "Vampiros"):
+		return false
 	if card["id"] == "F002" and (faction_resource < 2 or possession_active or enemy_intent_damage <= 0):
 		return false
 	if card["id"] == "F008" and (faction_resource < 3 or player_ethereal):
 		return false
-	if card["id"] == "F015" and (faction_resource < 2 or last_attack_damage <= 0):
+	if card["id"] == "F015" and (faction_resource < 2 or last_attack_card.is_empty()):
 		return false
 	return true
 
 func _play_card(card: Dictionary) -> void:
-	if not _can_play(card):
+	if not hand.has(card) or not _can_play(card):
 		message_label.text = "No puedes jugar esa carta ahora."
 		return
 	var paid_cost := _card_cost(card)
 	energy -= paid_cost
 	var card_id: String = card["id"]
-	var exhausts := card_id in ["L018", "V014", "F001", "F008", "F015"]
+	var exhausts := card_id in ["L018", "V008", "V014", "F001", "F008", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
 	_log_combat("Juegas %s (coste %d)." % [card["nombre"], paid_cost])
 	# Remove before drawing so this exact instance cannot be selected twice.
@@ -887,16 +910,23 @@ func _play_card(card: Dictionary) -> void:
 		pack_played = true
 
 	match card_id:
-		"L005":
-			var hits: Array[String] = []
-			for hit in 3:
-				if enemy_hp <= 0:
-					break
-				var result := _attack(4)
-				hits.append(result)
-				_log_combat("Manada Feroz · golpe %d: %s" % [hit + 1, result])
-			action_message += " / ".join(hits)
-		"H008", "L007", "V002", "V003":
+		"H001", "H007", "L001", "L004", "L005", "L006", "L008", "V001", "V005", "V006", "F004", "F005", "F009", "ENEMY_ACTION":
+			action_message += _resolve_attack_card(card)
+		"H006":
+			action_message += "la Milicia permanece junto a tus aliados."
+		"H009":
+			action_message += _gain_block(8) + " Héroe Local permanece en juego."
+		"F007":
+			enemy_weak += 2
+			faction_resource = mini(8, faction_resource + 2)
+			action_message += "2 de Débil y 2 de Ectoplasma."
+		"V008":
+			var copy := last_enemy_card.duplicate(true)
+			copy.coste = maxi(0, int(copy.coste) - 1)
+			copy.temporal = true
+			hand.append(copy)
+			action_message += "creas " + str(copy.nombre) + " temporal (coste %d)." % int(copy.coste)
+		"H008", "L003", "L007", "V002", "V003":
 			active_powers.append(card_id)
 			action_message += "poder activo durante este combate."
 		"F002":
@@ -910,19 +940,10 @@ func _play_card(card: Dictionary) -> void:
 		"H010":
 			barricade_active = true
 			action_message += "conservas el Bloqueo entre turnos durante este combate."
-		"L004":
-			action_message += _attack(5)
-			enemy_bleed += 2
-			_gain_fury(1)
 		"V009":
 			enemy_weak += 2
 			_gain_thirst(1)
 			action_message += "2 de Débil y 1 de Sed."
-		"F005":
-			action_message += _attack(7)
-			if faction_resource >= 3:
-				_apply_vulnerable(1)
-				action_message += " Aplica Vulnerable."
 		"H004":
 			action_message += _deal_damage(3)
 			_apply_vulnerable(2)
@@ -930,35 +951,15 @@ func _play_card(card: Dictionary) -> void:
 			enemy_weak += 1
 			_draw_cards(1)
 			action_message += "Débil y robo de una carta."
-		"L006":
-			action_message += _attack(4)
-			enemy_weak += 2
-			if faction_resource >= 2:
-				faction_resource -= 2
-				enemy_bleed += 2
-		"L008": action_message += _attack(8)
-		"V005":
-			action_message += _attack(10)
-			player_hp = mini(MAX_HP, player_hp + 3)
-			faction_resource = maxi(0, faction_resource - 2)
-		"V006":
-			action_message += _attack(8)
-			_gain_thirst(1)
-		"F004":
-			action_message += _attack(4)
-			faction_resource = mini(8, faction_resource + 1)
 		"F006":
 			enemy_weak += 2
 			faction_resource = mini(8, faction_resource + 1)
 			action_message += "2 de Débil y 1 de Ectoplasma."
-		"H001": action_message += _attack(6, 3 if enemy_vulnerable > 0 else 0)
 		"H002":
 			player_block += 4
 			consecrated += 1
 			action_message += "4 de Bloqueo y Consagración."
 		"H003": action_message += _gain_block(5)
-		"H007": action_message += _attack(7)
-		"L001": action_message += _attack(6)
 		"L002":
 			_gain_fury(2)
 			enemy_weak += 1
@@ -968,7 +969,6 @@ func _play_card(card: Dictionary) -> void:
 			_draw_cards(1)
 			action_message += "el enemigo queda Marcado. Robas 1 carta."
 		"L029": action_message += _gain_block(5)
-		"V001": action_message += _attack(6)
 		"V004":
 			action_message += "examina las próximas cartas."
 			_start_scout()
@@ -982,17 +982,19 @@ func _play_card(card: Dictionary) -> void:
 			_draw_cards(1)
 			action_message += "1 de Ectoplasma y robas 1 carta."
 		"F003": action_message += _gain_block(5)
-		"F009": action_message += _attack(6)
 		"F015":
 			faction_resource -= 2
-			var echo_damage := maxi(1, floori(last_attack_damage * 0.5))
-			action_message += _deal_damage(echo_damage) + " mediante Eco."
+			action_message += _resolve_attack_card(last_attack_card, 0.5) + " mediante Eco."
+	if str(card.tipo) == "Ataque":
+		last_attack_card = card.duplicate(true)
 
 	if "V002" in active_powers and not mist_triggered and "Niebla" in card.get("etiquetas", []):
 		mist_triggered = true
 		player_block += 3
 		_log_combat("Niebla Eterna: +3 Bloqueo por la primera carta de Niebla del turno.")
-	if card_id in _active_power_ids():
+	if str(card.tipo) == "Aliado":
+		allies.append(card)
+	elif card_id in _active_power_ids():
 		pass # Persistent power: leaves the piles until the next combat.
 	elif exhausts:
 		exhaust_pile.append(card)
@@ -1021,14 +1023,59 @@ func _apply_vulnerable(amount: int) -> void:
 		_draw_cards(1)
 		_log_combat("Cazador Experto: robas 1 carta por aplicar Vulnerable.")
 
-func _attack(base_damage: int, bonus_damage := 0) -> String:
+func _potency(amount: int, scale: float) -> int:
+	return maxi(1, floori(amount * scale)) if amount > 0 else 0
+
+func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
+	var id: String = card.id
+	var damage: int = {"H001": 6, "H007": 7, "L001": 6, "L004": 5, "L005": 4, "L006": 4, "L008": 8, "V001": 6, "V005": 10, "V006": 8, "F004": 4, "F005": 7, "F009": 6}.get(id, int(card.get("damage", 0)))
+	var hits: int = 3 if id == "L005" else int(card.get("hits", 1))
+	if id == "L008" and not allies.is_empty():
+		damage -= 4
+	if id == "H007":
+		enemy_ethereal = false
+	var results: Array[String] = []
+	for hit in hits:
+		if enemy_hp <= 0 or damage <= 0:
+			break
+		var bonus := 3 if id == "H001" and enemy_vulnerable > 0 else 0
+		var result := _attack(damage, bonus, scale)
+		results.append(result)
+		if hits > 1:
+			_log_combat("%s · golpe %d: %s" % [card.nombre, hit + 1, result])
+	match id:
+		"L004":
+			enemy_bleed += _potency(2, scale)
+			_gain_fury(_potency(1, scale))
+		"L006":
+			enemy_weak += _potency(2, scale)
+			if faction_resource >= 2:
+				faction_resource -= 2
+				enemy_bleed += _potency(2, scale)
+		"V005":
+			player_hp = mini(MAX_HP, player_hp + _potency(3, scale))
+			faction_resource = maxi(0, faction_resource - _potency(2, scale))
+		"V006": _gain_thirst(_potency(1, scale))
+		"F004": faction_resource = mini(8, faction_resource + _potency(1, scale))
+		"F005":
+			if faction_resource >= 3:
+				_apply_vulnerable(_potency(1, scale))
+		"ENEMY_ACTION":
+			player_block += _potency(int(card.block), scale)
+			enemy_weak += _potency(int(card.weak), scale)
+			if card.get("ethereal", false):
+				player_ethereal = true
+	return " / ".join(results) if not results.is_empty() else "efectos aplicados."
+
+func _attack(base_damage: int, bonus_damage := 0, scale := 1.0) -> String:
 	var damage := base_damage + bonus_damage + temporary_strength
 	if consecrated > 0:
 		damage += 3
 		consecrated -= 1
 	if player_weak > 0:
 		damage = maxi(1, floori(damage * 0.75))
-	var dealt := _deal_damage(damage)
+	damage = _potency(damage, scale)
+	var dealt := _deal_damage(damage, true)
 	last_attack_damage = damage
 	return dealt
 
@@ -1049,13 +1096,16 @@ func _gain_fury(amount: int) -> void:
 		temporary_strength += 2
 		_log_combat("Descontrol: coste de 3 Salud, Furia vuelve a 5 y Fuerza +2.")
 
-func _deal_damage(amount: int) -> String:
+func _deal_damage(amount: int, is_attack := false) -> String:
 	var modified := amount
-	if enemy_vulnerable > 0:
+	if is_attack and enemy_vulnerable > 0:
 		modified = floori(modified * 1.5)
+	if is_attack and enemy_ethereal and modified > 0:
+		enemy_ethereal = false
+		return "0 de daño (Etéreo)."
 	var absorbed := mini(enemy_block, modified)
 	enemy_block -= absorbed
-	var health_damage := modified - absorbed
+	var health_damage := mini(enemy_hp, modified - absorbed)
 	enemy_hp = maxi(0, enemy_hp - health_damage)
 	return "%d de daño." % health_damage
 
@@ -1110,6 +1160,23 @@ func _resolve_scout(index: int, choices: Array[Dictionary], overlay: ColorRect) 
 	_log_combat(message_label.text)
 	_refresh_battle()
 
+func _ally_count(id: String) -> int:
+	var count := 0
+	for ally in allies:
+		if ally.id == id:
+			count += 1
+	return count
+
+func _enemy_action_card() -> Dictionary:
+	# Enemy turns are explicit cards, so Conversion copies the action actually
+	# played, not a future intention or an unrelated player card.
+	var faction: String = {0: "Fantasmas", 1: "Hombres Lobo", 2: "Humanos", 4: "Fantasmas"}.get(stage, "Fantasmas")
+	return {"id": "ENEMY_ACTION", "nombre": "%s · acción %d" % [encounter_name.capitalize(), enemy_pattern % ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0]).size() + 1],
+		"faccion": faction, "tipo": "Ataque" if enemy_intent_damage > 0 else "Habilidad", "rareza": "Enemiga", "coste": 2,
+		"damage": enemy_intent_damage, "hits": enemy_intent_hits, "block": enemy_intent_block, "weak": enemy_intent_weak, "ethereal": enemy_intent_ethereal,
+		"efecto": ("%d daño × %d. Obtén %d Bloqueo y aplica %d Débil." % [enemy_intent_damage, enemy_intent_hits, enemy_intent_block, enemy_intent_weak]) + (" Obtén Etéreo." if enemy_intent_ethereal else ""),
+		"mejora": "Sin mejora: carta enemiga.", "etiquetas": []}
+
 func _end_turn() -> void:
 	if battle_over or choosing_card:
 		return
@@ -1119,11 +1186,18 @@ func _end_turn() -> void:
 	# by the enemy therefore remains available for the next player turn.
 	temporary_strength = 0
 	player_weak = maxi(0, player_weak - 1)
+	var militia_count := _ally_count("H006")
+	if militia_count > 0:
+		var militia_block := 3 * allies.size() * militia_count
+		player_block += militia_block
+		_log_combat("Milicia Organizada: +%d Bloqueo por %d aliados." % [militia_block, allies.size()])
+	last_enemy_card = _enemy_action_card()
+	_log_combat("El enemigo juega " + str(last_enemy_card.nombre) + ".")
 	_log_combat("Fin del turno del jugador. " + _enemy_intent_text())
 	var total_damage := 0
 	var incoming := _enemy_hit_damage()
 	for hit in enemy_intent_hits:
-		if incoming == 0 or player_hp <= 0:
+		if incoming == 0 or player_hp <= 0 or enemy_hp <= 0:
 			break
 		if player_ethereal:
 			player_ethereal = false
@@ -1137,11 +1211,17 @@ func _end_turn() -> void:
 		_log_combat("Golpe %d/%d: %d de daño, %d absorbido por Bloqueo, pierdes %d Salud." % [hit + 1, enemy_intent_hits, incoming, absorbed, health_damage])
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
 			_gain_fury(1)
+		if health_damage > 0 and not hero_triggered and _ally_count("H009") > 0:
+			hero_triggered = true
+			_log_combat("Héroe Local contraataca: " + _deal_damage(4 * _ally_count("H009")))
 	possession_active = false
 	message_label.text = "%s: recibes %d de daño de ataques." % [encounter_name, total_damage]
-	if player_hp > 0:
+	if player_hp > 0 and enemy_hp > 0:
 		enemy_block += enemy_intent_block
 		player_weak += enemy_intent_weak
+		if enemy_intent_ethereal:
+			enemy_ethereal = true
+			message_label.text += " Obtiene Etéreo."
 		if enemy_intent_block > 0:
 			message_label.text += " Gana %d Bloqueo." % enemy_intent_block
 		if enemy_intent_weak > 0:
@@ -1221,12 +1301,14 @@ func _refresh_battle() -> void:
 		enemy_states.append("Vulnerable %d" % enemy_vulnerable)
 	if enemy_marked:
 		enemy_states.append("Marcado")
+	if enemy_ethereal:
+		enemy_states.append("Etéreo")
 	if enemy_bleed > 0:
 		enemy_states.append("Sangrado %d" % enemy_bleed)
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
 	intent_label.text = _enemy_intent_text()
-	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": _active_power_ids().size()}
+	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": _active_power_ids().size(), "Aliados": allies.size()}
 	for pile_name in pile_counts:
 		pile_buttons[pile_name].text = "%s · %d" % [pile_name.to_upper(), pile_counts[pile_name]]
 		pile_buttons[pile_name].disabled = choosing_card

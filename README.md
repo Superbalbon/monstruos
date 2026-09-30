@@ -25,7 +25,7 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 
 ## Estado
 
-La preproducción narrativa, el catálogo nominal y las reglas base de combate están definidos. El prototipo de Godot permite elegir una de las cuatro facciones y disputar un combate completo con su mazo inicial cargado desde los datos del juego.
+El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Las mejoras de cartas y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
 
 ## Ejecutar el prototipo
 
@@ -38,7 +38,7 @@ No requiere complementos ni recursos externos.
 ## Controles
 
 - Selecciona una carta para jugarla.
-- Pasa el cursor sobre una carta para ver su mejora.
+- Pasa el cursor sobre una carta para leer su efecto completo y su mejora prevista (todavía no disponible).
 - Pulsa **Terminar turno** para resolver la intención enemiga.
 - El Murciélago Espía abre una selección de las siguientes cartas del mazo.
 
@@ -46,8 +46,8 @@ No requiere complementos ni recursos externos.
 
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
-se conservan entre encuentros. Tras vencer puedes elegir una de cinco cartas
-(seis en Fantasmas, Hombres Lobo y Vampiros, accesibles con la barra horizontal)
+se conservan entre encuentros. Tras vencer puedes elegir una de siete cartas
+por facción (accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
@@ -62,9 +62,9 @@ una expedición cuyo mazo haya quedado reducido a 9 cartas.
 Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
-Ectoplasma Frío y Cadena Etérea. El catálogo de 40 cartas sigue siendo un
-documento de diseño: todavía no están implementadas todas las cartas,
-las mejoras ni los aliados persistentes. Descontrol y las penalizaciones de Sed
+Ectoplasma Frío y Cadena Etérea. Las 40 cartas base y los aliados persistentes
+ya están implementados; las mejoras siguen siendo propuestas de diseño.
+Descontrol y las penalizaciones de Sed
 ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
 
@@ -123,6 +123,36 @@ activa ni consume la oportunidad; reducir Sed y volver a aumentarla sí puede
 activarlo. Si no quedan cartas para robar, la activación se consume igualmente.
 No roba al jugarse ni por aumentos anteriores; no admite dos copias activas.
 
+## Catálogo base completo
+
+Las últimas incorporaciones completan las 40 cartas; se obtienen como recompensas,
+no se añaden automáticamente a los mazos iniciales:
+
+- **Milicia Organizada:** permanece como aliado. Al terminar tu turno, cada
+  Milicia genera 3 Bloqueo por aliado en juego, incluida ella misma.
+- **Héroe Local:** permanece como aliado y otorga 8 Bloqueo al entrar. La primera
+  vez cada turno que un ataque enemigo te quite Salud, causa 4 daño por Héroe.
+  Un contraataque letal detiene los golpes restantes del enemigo.
+- **Alfa Dominante:** poder que reduce en 1 el coste de la primera carta Manada
+  de cada turno, mínimo 0. Su activación cuenta como Manada ese turno.
+- **Conversión:** copia la última acción realmente ejecutada por un enemigo no
+  vampiro, no la próxima intención. Las acciones enemigas tienen coste base 2;
+  la copia cuesta 1 y reproduce daño, golpes, Bloqueo, Débil y Etéreo indicados.
+  Conversión se agota; la copia puede descartarse y robarse durante ese combate,
+  pero nunca se añade al mazo de la expedición ni al guardado.
+- **Lamento Nocturno:** aplica 2 Débil y genera 2 Ectoplasma, hasta el máximo de 8.
+
+Murciélago Espía también permanece como aliado, aunque su selección de cartas
+solo ocurre al jugarlo. Lobo Solitario inflige 4 en vez de 8 si tienes aliados.
+Los aliados admiten varias copias y se reinician en cada combate.
+
+**Eco del Pasado** repite el último ataque jugado este turno, incluidos sus
+efectos secundarios y su número de golpes, al 50 % de potencia. Los valores
+positivos se redondean hacia abajo con mínimo 1; los costes de recurso no se
+reducen. Las condiciones se vuelven a evaluar después de pagar los 2 Ectoplasma.
+No paga de nuevo el Ímpetu del ataque. **Antorcha Ardiente** elimina Etéreo antes
+de golpear, por lo que su daño no queda anulado por ese estado.
+
 ## Intenciones enemigas
 
 Cada encuentro tiene su propio ciclo, que se repite en este orden:
@@ -132,7 +162,7 @@ Cada encuentro tiene su propio ciclo, que se repite en este orden:
 | Desvelado | Ataque 7 → ataque 10 → Bloqueo 7 → ataque 13 |
 | Acechador | Dos golpes de 4 → Bloqueo 4 → ataque 12 |
 | Guardagujas | Ataque 8 y Bloqueo 4 → Bloqueo 10 → ataque 14 |
-| Custodio | Ataque 9 → Bloqueo 8 y 1 Débil → dos golpes de 6 → ataque 16 |
+| Custodio | Ataque 9 → Bloqueo 8, 1 Débil y Etéreo → dos golpes de 6 → ataque 16 |
 
 La intención muestra todos los efectos antes de resolverlos. Débil reduce cada
 golpe un 25 % (redondeado hacia abajo), y el Bloqueo disponible se consume entre
@@ -174,10 +204,10 @@ esto no constituye una prueba de equilibrio de dificultad.
 - `Continuar` restaura facción, Salud, etapa y mazo. Elegir estirpe para una nueva
   expedición sustituye la anterior, tal como indica el menú.
 - `Ver mazo` muestra todas las copias de la expedición desde la ruta y el combate.
-- En combate, pulsa **Robo**, **Descarte**, **Agotadas** o **Poderes** para consultar
+- En combate, pulsa **Robo**, **Descarte**, **Agotadas**, **Poderes** o **Aliados** para consultar
   las cartas de esa pila, incluidas las copias repetidas. Robo se ordena por nombre
-  y no revela el orden real ni altera el barajado. Poderes muestra Barricada cuando
-  está activa. Los visores son de solo consulta y se cierran con **Esc** o su botón.
+  y no revela el orden real ni altera el barajado. Poderes muestra los poderes
+  activos y Aliados las copias en juego. Los visores se cierran con **Esc** o su botón.
 - **Historial**, junto a las pilas, muestra los últimos 200 eventos del combate:
   cartas, estados tras jugarlas, intenciones, golpes, absorción por Bloqueo,
   Descontrol, Sed, Sangrado y resultado. Permite seleccionar y copiar el texto.
@@ -227,3 +257,7 @@ Pruebas de Manada Feroz, coste dinámico visible y ataques múltiples del jugado
 
 Pruebas de Sed Insaciable, límite de Sed, robo y barajado:
 `godot --headless --path . --script res://tests/thirst_tests.gd`.
+
+Pruebas de acceso, pago, destino y guardado de las 40 cartas, aliados, Alfa,
+Conversión, Etéreo enemigo, Lamento y efectos secundarios de Eco:
+`godot --headless --path . --script res://tests/completion_tests.gd`.

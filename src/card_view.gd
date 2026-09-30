@@ -7,7 +7,9 @@ func setup(card: Dictionary, faction_color: Color, art_path: String, current_cos
 	card_data = card
 	text = ""
 	custom_minimum_size = Vector2(218, 258)
-	tooltip_text = "Mejora: " + str(card["mejora"])
+	tooltip_text = str(card["nombre"]) + "\n" + str(card["efecto"]) + "\nMejora prevista (aún no disponible): " + str(card["mejora"])
+	if card.get("temporal", false):
+		tooltip_text += "\nTemporal: desaparece al terminar el combate; no se añade a tu mazo."
 	if current_cost >= 0 and current_cost != int(card["coste"]):
 		tooltip_text = "Coste actual: %d (base: %d).\n" % [current_cost, int(card["coste"])] + tooltip_text
 	clip_contents = true
@@ -79,6 +81,8 @@ func setup(card: Dictionary, faction_color: Color, art_path: String, current_cos
 	effect_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	effect_label.text = str(card["efecto"])
 	effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	effect_label.max_lines_visible = 4
+	effect_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	effect_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	effect_label.add_theme_font_size_override("font_size", 12)
 	effect_label.add_theme_color_override("font_color", Color("d9dce3"))
@@ -87,6 +91,8 @@ func setup(card: Dictionary, faction_color: Color, art_path: String, current_cos
 	var footer := Label.new()
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	footer.text = "%s · %s" % [card["tipo"], card["rareza"]]
+	if card.get("temporal", false):
+		footer.text += " · Temporal"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
 	footer.add_theme_color_override("font_color", Color("929bad"))
