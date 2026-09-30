@@ -23,4 +23,19 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 
 ## Estado
 
-La preproducción narrativa, el catálogo nominal y las reglas base de combate están definidos. Hay 40 cartas de prototipo —10 por facción— con costes, efectos y mejoras. El siguiente bloque será implementar estas reglas en un prototipo jugable de Godot.
+La preproducción narrativa, el catálogo nominal y las reglas base de combate están definidos. El prototipo de Godot permite elegir una de las cuatro facciones y disputar un combate completo con su mazo inicial cargado desde los datos del juego.
+
+## Ejecutar el prototipo
+
+1. Instala Godot 4.3 o posterior.
+2. Importa esta carpeta seleccionando `project.godot`.
+3. Ejecuta el proyecto con **F6** o **F5**.
+
+No requiere complementos ni recursos externos.
+
+## Controles
+
+- Selecciona una carta para jugarla.
+- Pasa el cursor sobre una carta para ver su mejora.
+- Pulsa **Terminar turno** para resolver la intención enemiga.
+- El Murciélago Espía abre una selección de las siguientes cartas del mazo.

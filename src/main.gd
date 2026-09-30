@@ -1,0 +1,566 @@
+extends Control
+
+const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
+const MAX_HP := 50
+const MAX_ENERGY := 3
+const HAND_TARGET := 5
+
+const FACTION_COLORS := {
+	"Humanos": Color("d5b66f"),
+	"Hombres Lobo": Color("c98258"),
+	"Vampiros": Color("c94f6d"),
+	"Fantasmas": Color("73c6c8")
+}
+
+const FACTION_SUBTITLES := {
+	"Humanos": "Preparación, fe y comunidad",
+	"Hombres Lobo": "Furia, caza y manada",
+	"Vampiros": "Sed, sangre y control",
+	"Fantasmas": "Ectoplasma, ecos y posesión"
+}
+
+const STARTER_DECKS := {
+	"Humanos": ["H001", "H001", "H001", "H001", "H003", "H003", "H003", "H003", "H002", "H007"],
+	"Hombres Lobo": ["L001", "L001", "L001", "L001", "L029", "L029", "L029", "L029", "L002", "L018"],
+	"Vampiros": ["V001", "V001", "V001", "V001", "V007", "V007", "V007", "V007", "V014", "V004"],
+	"Fantasmas": ["F009", "F009", "F009", "F009", "F003", "F003", "F003", "F003", "F001", "F015"]
+}
+
+var cards_by_id: Dictionary = {}
+var selected_faction := ""
+var draw_pile: Array[Dictionary] = []
+var discard_pile: Array[Dictionary] = []
+var exhaust_pile: Array[Dictionary] = []
+var hand: Array[Dictionary] = []
+
+var player_hp := MAX_HP
+var player_block := 0
+var energy := MAX_ENERGY
+var faction_resource := 0
+var consecrated := 0
+var last_attack_damage := 0
+
+var enemy_hp := 48
+var enemy_max_hp := 48
+var enemy_block := 0
+var enemy_weak := 0
+var enemy_vulnerable := 0
+var enemy_marked := false
+var enemy_intent_damage := 0
+var enemy_pattern := 0
+var turn := 0
+var battle_over := false
+var choosing_card := false
+
+var player_status: Label
+var enemy_status: Label
+var intent_label: Label
+var message_label: Label
+var piles_label: Label
+var hand_box: HBoxContainer
+var end_turn_button: Button
+var battle_root: VBoxContainer
+
+func _ready() -> void:
+	if not _load_cards():
+		_show_data_error()
+		return
+	show_title_screen()
+
+func _load_cards() -> bool:
+	if not FileAccess.file_exists(CARD_DATA_PATH):
+		return false
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(CARD_DATA_PATH))
+	if not parsed is Dictionary or not parsed.has("cartas"):
+		return false
+	for card_variant in parsed["cartas"]:
+		if card_variant is Dictionary and card_variant.has("id"):
+			cards_by_id[card_variant["id"]] = card_variant
+	for faction in STARTER_DECKS:
+		for card_id in STARTER_DECKS[faction]:
+			if not cards_by_id.has(card_id):
+				return false
+	return true
+
+func _clear_screen() -> void:
+	for child in get_children():
+		child.free()
+
+func _show_data_error() -> void:
+	_clear_screen()
+	var label := _make_label("No se pudo cargar data/cartas_prototipo.json", 26, Color("ff6b6b"))
+	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	add_child(label)
+
+func _make_label(text_value: String, font_size: int, color := Color.WHITE) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+func _make_panel(color: Color, radius := 14) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 16
+	style.content_margin_bottom = 16
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
+
+func _make_button(text_value: String, font_size := 18) -> Button:
+	var button := Button.new()
+	button.text = text_value
+	button.add_theme_font_size_override("font_size", font_size)
+	button.focus_mode = Control.FOCUS_ALL
+	return button
+
+func show_title_screen() -> void:
+	_clear_screen()
+	var background := ColorRect.new()
+	background.color = Color("080b13")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+	var content := VBoxContainer.new()
+	content.custom_minimum_size = Vector2(760, 0)
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 18)
+	center.add_child(content)
+
+	var year := _make_label("ESPAÑA · 1897", 18, Color("a69d8a"))
+	year.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(year)
+	var title := _make_label("MONSTRUOS", 64, Color("d8bd79"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(title)
+	var subtitle := _make_label("Las campanas de Valdegrís han tocado trece veces.", 23, Color("d7d9df"))
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(subtitle)
+	var description := _make_label("Elige quién responderá a la Desvelada.", 18, Color("9ea8b8"))
+	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(description)
+
+	var start_button := _make_button("ELEGIR PROTAGONISTA", 21)
+	start_button.custom_minimum_size = Vector2(0, 58)
+	start_button.pressed.connect(show_faction_selection)
+	content.add_child(start_button)
+
+func show_faction_selection() -> void:
+	_clear_screen()
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 64)
+	margin.add_theme_constant_override("margin_right", 64)
+	margin.add_theme_constant_override("margin_top", 42)
+	margin.add_theme_constant_override("margin_bottom", 42)
+	add_child(margin)
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 22)
+	margin.add_child(root)
+
+	var heading := _make_label("ELIGE UNA ESTIRPE", 36, Color("d8bd79"))
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(heading)
+	var cards := GridContainer.new()
+	cards.columns = 2
+	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cards.add_theme_constant_override("h_separation", 20)
+	cards.add_theme_constant_override("v_separation", 20)
+	root.add_child(cards)
+
+	for faction in STARTER_DECKS:
+		var panel := _make_panel(Color(FACTION_COLORS[faction], 0.16))
+		panel.custom_minimum_size = Vector2(540, 220)
+		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cards.add_child(panel)
+		var box := VBoxContainer.new()
+		box.alignment = BoxContainer.ALIGNMENT_CENTER
+		box.add_theme_constant_override("separation", 10)
+		panel.add_child(box)
+		var name_label := _make_label(faction.to_upper(), 28, FACTION_COLORS[faction])
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(name_label)
+		var role := _make_label(FACTION_SUBTITLES[faction], 17, Color("c8ccd5"))
+		role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(role)
+		var choose := _make_button("JUGAR", 18)
+		choose.custom_minimum_size = Vector2(0, 48)
+		choose.pressed.connect(start_battle.bind(faction))
+		box.add_child(choose)
+
+	var back := _make_button("Volver", 16)
+	back.pressed.connect(show_title_screen)
+	root.add_child(back)
+
+func start_battle(faction: String) -> void:
+	selected_faction = faction
+	draw_pile.clear()
+	discard_pile.clear()
+	exhaust_pile.clear()
+	hand.clear()
+	for card_id in STARTER_DECKS[faction]:
+		draw_pile.append(cards_by_id[card_id].duplicate(true))
+	draw_pile.shuffle()
+	player_hp = MAX_HP
+	player_block = 0
+	energy = MAX_ENERGY
+	faction_resource = 0
+	consecrated = 0
+	last_attack_damage = 0
+	enemy_max_hp = 48
+	enemy_hp = enemy_max_hp
+	enemy_block = 0
+	enemy_weak = 0
+	enemy_vulnerable = 0
+	enemy_marked = false
+	enemy_pattern = 0
+	turn = 0
+	battle_over = false
+	choosing_card = false
+	_build_battle_screen()
+	_begin_player_turn()
+
+func _build_battle_screen() -> void:
+	_clear_screen()
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 32)
+	margin.add_theme_constant_override("margin_right", 32)
+	margin.add_theme_constant_override("margin_top", 22)
+	margin.add_theme_constant_override("margin_bottom", 22)
+	add_child(margin)
+	battle_root = VBoxContainer.new()
+	battle_root.add_theme_constant_override("separation", 12)
+	margin.add_child(battle_root)
+
+	var header := HBoxContainer.new()
+	battle_root.add_child(header)
+	var title := _make_label("MONSTRUOS", 25, Color("d8bd79"))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var faction_label := _make_label(selected_faction.to_upper(), 20, FACTION_COLORS[selected_faction])
+	header.add_child(faction_label)
+
+	var battlefield := HBoxContainer.new()
+	battlefield.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	battlefield.add_theme_constant_override("separation", 22)
+	battle_root.add_child(battlefield)
+
+	var player_panel := _make_panel(Color("141c2b"))
+	player_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battlefield.add_child(player_panel)
+	var player_box := VBoxContainer.new()
+	player_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	player_box.add_theme_constant_override("separation", 12)
+	player_panel.add_child(player_box)
+	var protagonist := _make_label(_protagonist_name(), 29, FACTION_COLORS[selected_faction])
+	protagonist.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_box.add_child(protagonist)
+	player_status = _make_label("", 19)
+	player_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_box.add_child(player_status)
+
+	var enemy_panel := _make_panel(Color("301823"))
+	enemy_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battlefield.add_child(enemy_panel)
+	var enemy_box := VBoxContainer.new()
+	enemy_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	enemy_box.add_theme_constant_override("separation", 12)
+	enemy_panel.add_child(enemy_box)
+	var enemy_name := _make_label("EL DESVELADO", 29, Color("e3677e"))
+	enemy_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	enemy_box.add_child(enemy_name)
+	enemy_status = _make_label("", 19)
+	enemy_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	enemy_box.add_child(enemy_status)
+	intent_label = _make_label("", 18, Color("f0c36a"))
+	intent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	enemy_box.add_child(intent_label)
+
+	message_label = _make_label("", 17, Color("cbd2df"))
+	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_root.add_child(message_label)
+	piles_label = _make_label("", 14, Color("929bad"))
+	piles_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_root.add_child(piles_label)
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 176)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	battle_root.add_child(scroll)
+	hand_box = HBoxContainer.new()
+	hand_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	hand_box.add_theme_constant_override("separation", 10)
+	scroll.add_child(hand_box)
+
+	end_turn_button = _make_button("TERMINAR TURNO", 18)
+	end_turn_button.custom_minimum_size = Vector2(0, 48)
+	end_turn_button.pressed.connect(_end_turn)
+	battle_root.add_child(end_turn_button)
+
+func _protagonist_name() -> String:
+	match selected_faction:
+		"Humanos": return "INÉS VALCÁRCEL"
+		"Hombres Lobo": return "TOMÁS DE ARCE"
+		"Vampiros": return "LEONOR DE MONTENEGRO"
+		_: return "CLARA"
+
+func _begin_player_turn() -> void:
+	turn += 1
+	player_block = 0
+	energy = MAX_ENERGY
+	last_attack_damage = 0
+	_set_enemy_intent()
+	_draw_to_hand(HAND_TARGET)
+	message_label.text = "Turno %d. La criatura revela su intención." % turn
+	_refresh_battle()
+
+func _set_enemy_intent() -> void:
+	match enemy_pattern % 4:
+		0: enemy_intent_damage = 7
+		1: enemy_intent_damage = 10
+		2: enemy_intent_damage = 0
+		_: enemy_intent_damage = 13
+
+func _draw_to_hand(target_size: int) -> void:
+	while hand.size() < target_size:
+		if not _ensure_draw_card():
+			break
+		hand.append(draw_pile.pop_back())
+
+func _draw_cards(amount: int) -> void:
+	for index in amount:
+		if not _ensure_draw_card():
+			return
+		hand.append(draw_pile.pop_back())
+
+func _ensure_draw_card() -> bool:
+	if draw_pile.is_empty():
+		if discard_pile.is_empty():
+			return false
+		draw_pile.assign(discard_pile)
+		discard_pile.clear()
+		draw_pile.shuffle()
+	return true
+
+func _can_play(card: Dictionary) -> bool:
+	if battle_over or choosing_card or energy < int(card["coste"]):
+		return false
+	if card["id"] == "F002" and faction_resource < 2:
+		return false
+	if card["id"] == "F008" and faction_resource < 3:
+		return false
+	if card["id"] == "F015" and (faction_resource < 2 or last_attack_damage <= 0):
+		return false
+	return true
+
+func _play_card(card: Dictionary) -> void:
+	if not _can_play(card):
+		message_label.text = "No puedes jugar esa carta ahora."
+		return
+	energy -= int(card["coste"])
+	var card_id: String = card["id"]
+	var exhausts := card_id in ["L018", "V014", "F001", "F015"]
+	var action_message := card["nombre"] + ": "
+
+	match card_id:
+		"H001": action_message += _attack(6, 3 if enemy_vulnerable > 0 else 0)
+		"H002":
+			player_block += 4
+			consecrated += 1
+			action_message += "4 de Bloqueo y Consagración."
+		"H003": action_message += _gain_block(5)
+		"H007": action_message += _attack(7)
+		"L001": action_message += _attack(6)
+		"L002":
+			faction_resource = mini(10, faction_resource + 2)
+			enemy_weak += 1
+			action_message += "2 de Furia y 1 de Débil."
+		"L018":
+			enemy_marked = true
+			_draw_cards(1)
+			action_message += "el enemigo queda Marcado. Robas 1 carta."
+		"L029": action_message += _gain_block(5)
+		"V001": action_message += _attack(6)
+		"V004":
+			action_message += "examina las próximas cartas."
+			_start_scout()
+		"V007": action_message += _gain_block(5)
+		"V014":
+			faction_resource = maxi(0, faction_resource - 2)
+			_draw_cards(1)
+			action_message += "reduces la Sed y robas 1 carta."
+		"F001":
+			faction_resource = mini(8, faction_resource + 1)
+			_draw_cards(1)
+			action_message += "1 de Ectoplasma y robas 1 carta."
+		"F003": action_message += _gain_block(5)
+		"F009": action_message += _attack(6)
+		"F015":
+			faction_resource -= 2
+			var echo_damage := maxi(1, floori(last_attack_damage * 0.5))
+			action_message += _deal_damage(echo_damage) + " mediante Eco."
+
+	hand.erase(card)
+	if exhausts:
+		exhaust_pile.append(card)
+	else:
+		discard_pile.append(card)
+	message_label.text = action_message
+	if enemy_hp <= 0:
+		_finish_battle(true)
+	else:
+		_refresh_battle()
+
+func _attack(base_damage: int, bonus_damage := 0) -> String:
+	var damage := base_damage + bonus_damage
+	if consecrated > 0:
+		damage += 3
+		consecrated -= 1
+	var dealt := _deal_damage(damage)
+	last_attack_damage = damage
+	return dealt
+
+func _deal_damage(amount: int) -> String:
+	var modified := amount
+	if enemy_vulnerable > 0:
+		modified = floori(modified * 1.5)
+	var absorbed := mini(enemy_block, modified)
+	enemy_block -= absorbed
+	var health_damage := modified - absorbed
+	enemy_hp = maxi(0, enemy_hp - health_damage)
+	return "%d de daño." % health_damage
+
+func _gain_block(amount: int) -> String:
+	player_block += amount
+	return "%d de Bloqueo." % amount
+
+func _start_scout() -> void:
+	var choices: Array[Dictionary] = []
+	for index in 2:
+		if _ensure_draw_card():
+			choices.append(draw_pile.pop_back())
+	if choices.is_empty():
+		return
+	if choices.size() == 1:
+		hand.append(choices[0])
+		return
+	choosing_card = true
+	var overlay := ColorRect.new()
+	overlay.name = "ScoutOverlay"
+	overlay.color = Color(0.01, 0.01, 0.02, 0.9)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(520, 0)
+	box.add_theme_constant_override("separation", 14)
+	center.add_child(box)
+	var title := _make_label("MURCIÉLAGO ESPÍA · ELIGE UNA CARTA", 22, Color("d8bd79"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	for choice in choices:
+		var button := _make_button("%s  [%d]\n%s" % [choice["nombre"], choice["coste"], choice["efecto"]], 16)
+		button.custom_minimum_size = Vector2(0, 82)
+		button.pressed.connect(_resolve_scout.bind(choice, choices, overlay))
+		box.add_child(button)
+
+func _resolve_scout(chosen: Dictionary, choices: Array[Dictionary], overlay: ColorRect) -> void:
+	hand.append(chosen)
+	for card in choices:
+		if card != chosen:
+			draw_pile.append(card)
+	choosing_card = false
+	overlay.queue_free()
+	message_label.text = "El Murciélago Espía trae %s a tu mano." % chosen["nombre"]
+	_refresh_battle()
+
+func _end_turn() -> void:
+	if battle_over or choosing_card:
+		return
+	discard_pile.append_array(hand)
+	hand.clear()
+	if enemy_intent_damage == 0:
+		enemy_block += 7
+		message_label.text = "El Desvelado reúne 7 de Bloqueo."
+	else:
+		var incoming := enemy_intent_damage
+		if enemy_weak > 0:
+			incoming = maxi(1, floori(incoming * 0.75))
+		var absorbed := mini(player_block, incoming)
+		player_block -= absorbed
+		var health_damage := incoming - absorbed
+		player_hp -= health_damage
+		if selected_faction == "Hombres Lobo" and health_damage > 0:
+			faction_resource = mini(10, faction_resource + 1)
+		message_label.text = "El Desvelado ataca. Recibes %d de daño." % health_damage
+	if enemy_weak > 0:
+		enemy_weak -= 1
+	if enemy_vulnerable > 0:
+		enemy_vulnerable -= 1
+	if selected_faction == "Vampiros" and faction_resource >= 8:
+		player_hp -= 2
+		message_label.text += " La Sed te causa 2 de daño."
+	enemy_pattern += 1
+	if player_hp <= 0:
+		_finish_battle(false)
+	else:
+		_begin_player_turn()
+
+func _resource_text() -> String:
+	match selected_faction:
+		"Hombres Lobo": return "Furia %d/10" % faction_resource
+		"Vampiros": return "Sed %d/10" % faction_resource
+		"Fantasmas": return "Ectoplasma %d/8" % faction_resource
+		_: return "Consagración %d" % consecrated
+
+func _refresh_battle() -> void:
+	player_status.text = "♥ %d/%d     ◆ %d     ⚡ %d/%d\n%s" % [maxi(0, player_hp), MAX_HP, player_block, energy, MAX_ENERGY, _resource_text()]
+	var enemy_states: Array[String] = []
+	if enemy_weak > 0:
+		enemy_states.append("Débil %d" % enemy_weak)
+	if enemy_vulnerable > 0:
+		enemy_states.append("Vulnerable %d" % enemy_vulnerable)
+	if enemy_marked:
+		enemy_states.append("Marcado")
+	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
+	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
+	intent_label.text = "Intención: defenderse" if enemy_intent_damage == 0 else "Intención: atacar por %d" % enemy_intent_damage
+	piles_label.text = "Mazo %d  ·  Descarte %d  ·  Agotadas %d" % [draw_pile.size(), discard_pile.size(), exhaust_pile.size()]
+
+	for child in hand_box.get_children():
+		child.queue_free()
+	for card in hand:
+		var button := _make_button("%s  [%d⚡]\n%s" % [card["nombre"], card["coste"], card["efecto"]], 15)
+		button.custom_minimum_size = Vector2(225, 150)
+		button.tooltip_text = "Mejora: " + str(card["mejora"])
+		button.disabled = not _can_play(card)
+		button.pressed.connect(_play_card.bind(card))
+		hand_box.add_child(button)
+	end_turn_button.disabled = battle_over or choosing_card
+
+func _finish_battle(victory: bool) -> void:
+	battle_over = true
+	hand.clear()
+	_refresh_battle()
+	message_label.text = "VICTORIA · La niebla retrocede ante Valdegrís." if victory else "DERROTA · La Desvelada reclama otro recuerdo."
+	message_label.add_theme_color_override("font_color", Color("79d98c") if victory else Color("ee6b7a"))
+	end_turn_button.disabled = false
+	end_turn_button.text = "VOLVER A ELEGIR ESTIRPE"
+	for connection in end_turn_button.pressed.get_connections():
+		end_turn_button.pressed.disconnect(connection["callable"])
+	end_turn_button.pressed.connect(show_faction_selection)
