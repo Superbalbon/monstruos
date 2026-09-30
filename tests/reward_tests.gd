@@ -36,9 +36,13 @@ func run() -> void:
 		for button in game.find_children("*", "Button", true, false):
 			if button is CardView:
 				visible_cards += 1
-				if faction != "Fantasmas":
+				if game.REWARDS[faction].size() <= 4:
 					check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(button.get_global_rect()), "Recompensa dentro de pantalla " + button.card_data.id)
 		check(visible_cards == game.REWARDS[faction].size(), "Todas las recompensas renderizadas " + faction)
+		var scroll = game.find_children("*", "ScrollContainer", true, false)[0]
+		scroll.scroll_horizontal = 10000
+		await process_frame
+		check(scroll.get_global_rect().encloses(scroll.get_child(0).get_children().back().get_global_rect()), "Última recompensa accesible " + faction)
 		var id: String = game.REWARDS[faction][3]
 		game._take_reward(id)
 		check(id in game.run_deck and game.run_deck.size() == 11, "Nueva recompensa " + id)

@@ -43,9 +43,9 @@ const ENEMY_PATTERNS := {
 	4: [{"damage": 9}, {"block": 8, "weak": 1}, {"damage": 6, "hits": 2}, {"damage": 16}]
 }
 const REWARDS := {
-	"Humanos": ["H004", "H005", "H007", "H010"],
-	"Hombres Lobo": ["L006", "L008", "L002", "L004"],
-	"Vampiros": ["V005", "V006", "V014", "V009"],
+	"Humanos": ["H004", "H005", "H007", "H010", "H008"],
+	"Hombres Lobo": ["L006", "L008", "L002", "L004", "L007"],
+	"Vampiros": ["V005", "V006", "V014", "V009", "V002"],
 	"Fantasmas": ["F004", "F006", "F001", "F005", "F002", "F008"]
 }
 var draw_pile: Array[Dictionary] = []
@@ -64,6 +64,9 @@ var player_weak := 0
 var possession_active := false
 var player_ethereal := false
 var barricade_active := false
+var active_powers: Array[String] = []
+var hunter_triggered := false
+var mist_triggered := false
 
 var enemy_hp := 48
 var enemy_max_hp := 48
@@ -257,8 +260,8 @@ func _show_deck(pile_name := "", remove_at_camp := false) -> void:
 				display_cards.assign(exhaust_pile)
 				description = "Fuera de circulación hasta el siguiente combate."
 			"Poderes":
-				if barricade_active:
-					display_cards.append(cards_by_id["H010"])
+				for id in _active_power_ids():
+					display_cards.append(cards_by_id[id])
 				description = "Efectos persistentes activos durante este combate. No vuelven a las pilas."
 			_: return
 		display_cards.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.nombre) < str(b.nombre))
@@ -649,6 +652,9 @@ func start_battle(faction: String) -> void:
 	possession_active = false
 	player_ethereal = false
 	barricade_active = false
+	active_powers.clear()
+	hunter_triggered = false
+	mist_triggered = false
 	enemy_hp = enemy_max_hp
 	enemy_block = 0
 	enemy_weak = 0
@@ -772,11 +778,20 @@ func _protagonist_name() -> String:
 
 func _begin_player_turn() -> void:
 	turn += 1
+	hunter_triggered = false
+	mist_triggered = false
 	if not barricade_active:
 		player_block = 0
 	energy = MAX_ENERGY
 	last_attack_damage = 0
 	_set_enemy_intent()
+	if "L007" in active_powers:
+		temporary_strength += 1
+		_log_combat("Luna Llena: +1 Fuerza durante este turno y +1 Furia.")
+		_gain_fury(1)
+		if player_hp <= 0:
+			_finish_battle(false)
+			return
 	_draw_to_hand(HAND_TARGET)
 	message_label.text = "Turno %d. La criatura revela su intención." % turn
 	_log_combat("Inicio de turno. " + _enemy_intent_text())
@@ -835,7 +850,7 @@ func _ensure_draw_card() -> bool:
 func _can_play(card: Dictionary) -> bool:
 	if battle_over or choosing_card or energy < int(card["coste"]):
 		return false
-	if card["id"] == "H010" and barricade_active:
+	if card["id"] in _active_power_ids():
 		return false
 	if card["id"] == "F002" and (faction_resource < 2 or possession_active or enemy_intent_damage <= 0):
 		return false
@@ -858,6 +873,9 @@ func _play_card(card: Dictionary) -> void:
 	hand.erase(card)
 
 	match card_id:
+		"H008", "L007", "V002":
+			active_powers.append(card_id)
+			action_message += "poder activo durante este combate."
 		"F002":
 			faction_resource -= 2
 			possession_active = true
@@ -880,11 +898,11 @@ func _play_card(card: Dictionary) -> void:
 		"F005":
 			action_message += _attack(7)
 			if faction_resource >= 3:
-				enemy_vulnerable += 1
+				_apply_vulnerable(1)
 				action_message += " Aplica Vulnerable."
 		"H004":
 			action_message += _deal_damage(3)
-			enemy_vulnerable += 2
+			_apply_vulnerable(2)
 		"H005":
 			enemy_weak += 1
 			_draw_cards(1)
@@ -947,7 +965,11 @@ func _play_card(card: Dictionary) -> void:
 			var echo_damage := maxi(1, floori(last_attack_damage * 0.5))
 			action_message += _deal_damage(echo_damage) + " mediante Eco."
 
-	if card_id == "H010":
+	if "V002" in active_powers and not mist_triggered and "Niebla" in card.get("etiquetas", []):
+		mist_triggered = true
+		player_block += 3
+		_log_combat("Niebla Eterna: +3 Bloqueo por la primera carta de Niebla del turno.")
+	if card_id in _active_power_ids():
 		pass # Persistent power: leaves the piles until the next combat.
 	elif exhausts:
 		exhaust_pile.append(card)
@@ -962,6 +984,19 @@ func _play_card(card: Dictionary) -> void:
 		_finish_battle(true)
 	else:
 		_refresh_battle()
+
+func _active_power_ids() -> Array[String]:
+	var ids: Array[String] = active_powers.duplicate()
+	if barricade_active:
+		ids.append("H010")
+	return ids
+
+func _apply_vulnerable(amount: int) -> void:
+	enemy_vulnerable += amount
+	if "H008" in active_powers and not hunter_triggered:
+		hunter_triggered = true
+		_draw_cards(1)
+		_log_combat("Cazador Experto: robas 1 carta por aplicar Vulnerable.")
 
 func _attack(base_damage: int, bonus_damage := 0) -> String:
 	var damage := base_damage + bonus_damage + temporary_strength
@@ -1102,7 +1137,8 @@ func _end_turn() -> void:
 	else:
 		var enemy_report := message_label.text
 		_begin_player_turn()
-		message_label.text = enemy_report + " Turno %d." % turn
+		if not battle_over:
+			message_label.text = enemy_report + " Turno %d." % turn
 
 func _resource_text() -> String:
 	match selected_faction:
@@ -1139,6 +1175,8 @@ func _refresh_battle() -> void:
 		player_status.text += " · Etéreo"
 	if barricade_active:
 		player_status.text += " · Barricada"
+	for id in active_powers:
+		player_status.text += " · " + str(cards_by_id[id].nombre)
 	player_status.tooltip_text = "Consagración: +3 al siguiente ataque; consume una carga."
 	match selected_faction:
 		"Hombres Lobo": player_status.tooltip_text = "Furia 10: pierde 3 Salud, vuelve a 5 y gana +2 daño de ataque este turno. Si ocurre al recibir un ataque, dura tu próximo turno."
@@ -1156,7 +1194,7 @@ func _refresh_battle() -> void:
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
 	intent_label.text = _enemy_intent_text()
-	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": int(barricade_active)}
+	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": _active_power_ids().size()}
 	for pile_name in pile_counts:
 		pile_buttons[pile_name].text = "%s · %d" % [pile_name.to_upper(), pile_counts[pile_name]]
 		pile_buttons[pile_name].disabled = choosing_card

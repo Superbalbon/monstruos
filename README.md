@@ -46,7 +46,7 @@ No requiere complementos ni recursos externos.
 
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
-se conservan entre encuentros. Tras vencer puedes elegir una de cuatro cartas
+se conservan entre encuentros. Tras vencer puedes elegir una de cinco cartas
 (seis en Fantasmas, accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
@@ -93,6 +93,21 @@ el catálogo (no se añaden automáticamente al mazo inicial):
 
 Ambos efectos se reinician al comenzar otro combate. La intención refleja la
 reducción por Posesión e indica cuándo Etéreo evitará el primer golpe.
+
+Hay tres poderes adicionales como quinta recompensa de sus facciones:
+
+- **Cazador Experto (Humanos):** roba una carta la primera vez que aplicas
+  Vulnerable cada turno mientras está activo. Combina con Trampa para Lobos.
+- **Luna Llena (Hombres Lobo):** desde el siguiente turno, genera 1 Furia y
+  1 Fuerza temporal al empezar cada turno. Puede provocar Descontrol, incluso
+  una derrota si no queda suficiente Salud para pagar su coste.
+- **Niebla Eterna (Vampiros):** la primera carta de Niebla jugada cada turno
+  mientras está activo otorga 3 Bloqueo. Su propia activación cuenta como Niebla;
+  a partir del siguiente turno puede activarse con Velo de Sombras.
+
+Estos poderes salen de las pilas al jugarse, aparecen en **Poderes** y en el
+historial, y no admiten otra copia activa simultáneamente. Sus cartas vuelven
+al mazo en el siguiente combate, pero hay que activarlas de nuevo.
 
 ## Intenciones enemigas
 
@@ -189,3 +204,6 @@ Pruebas de la decisión del descanso, cancelación, copia individual y carga:
 
 Pruebas de Posesión, Etéreo, costes y acceso a recompensas desplazables:
 `godot --headless --path . --script res://tests/ghost_defense_tests.gd`.
+
+Pruebas de poderes persistentes, activación una vez por turno y reinicio:
+`godot --headless --path . --script res://tests/power_tests.gd`.
