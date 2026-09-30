@@ -54,7 +54,10 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 		return false
 	if value.state == "reward" and int(value.stage) not in [0, 1, 2]:
 		return false
-	if not value.get("deck") is Array or value.deck.size() < 10 or value.deck.size() > 13:
+	if not value.get("deck") is Array or value.deck.size() < 9 or value.deck.size() > 13:
+		return false
+	# Only the final rest can remove a card; earlier checkpoints need ten.
+	if value.deck.size() == 9 and int(value.stage) != 4:
 		return false
 	for id in value.deck:
 		if not id is String or not cards.has(id):

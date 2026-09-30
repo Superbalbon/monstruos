@@ -50,6 +50,14 @@ se conservan entre encuentros. Tras vencer puedes elegir una de cuatro cartas
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
+En el descanso anterior al Custodio puedes elegir entre recuperar 15 Salud o
+**retirar una carta sin curarte**. La alternativa abre tu mazo: selecciona la
+copia que quieras retirar de esta expedición, o cancela con Esc. Retirar avanza
+al monasterio y se guarda automáticamente; no puedes retirar y curarte en el
+mismo descanso. El mazo puede quedar en 9 cartas. Los guardados anteriores
+siguen funcionando en esta versión; no uses una versión antigua para cargar
+una expedición cuyo mazo haya quedado reducido a 9 cartas.
+
 Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
@@ -161,3 +169,6 @@ Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
 
 Pruebas del historial, consulta sin cambios y límite de eventos:
 `godot --headless --path . --script res://tests/history_tests.gd`.
+
+Pruebas de la decisión del descanso, cancelación, copia individual y carga:
+`godot --headless --path . --script res://tests/camp_tests.gd`.

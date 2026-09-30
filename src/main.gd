@@ -226,8 +226,10 @@ func _resume_run() -> void:
 	else:
 		show_route()
 
-func _show_deck(pile_name := "") -> void:
+func _show_deck(pile_name := "", remove_at_camp := false) -> void:
 	if has_node("DeckOverlay") or choosing_card:
+		return
+	if remove_at_camp and (screen != "route" or stage != 3 or run_deck.size() <= 9):
 		return
 	var display_cards: Array[Dictionary] = []
 	var heading := "TU MAZO"
@@ -235,6 +237,9 @@ func _show_deck(pile_name := "") -> void:
 	if pile_name.is_empty():
 		for id in run_deck:
 			display_cards.append(cards_by_id[id])
+		if remove_at_camp:
+			heading = "RETIRAR UNA CARTA"
+			description = "Selecciona una copia para retirarla de esta expedición. Avanzarás al jefe SIN recuperar Salud."
 	else:
 		if screen not in ["battle", "won", "lost"]:
 			return
@@ -257,6 +262,7 @@ func _show_deck(pile_name := "") -> void:
 		display_cards.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.nombre) < str(b.nombre))
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
+	overlay.set_meta("camp_removal", remove_at_camp)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var box := VBoxContainer.new()
@@ -276,16 +282,31 @@ func _show_deck(pile_name := "") -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
-	for card in display_cards:
+	for index in display_cards.size():
+		var card: Dictionary = display_cards[index]
 		var view := CardViewScene.new()
 		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
 		view.focus_mode = Control.FOCUS_NONE
+		if remove_at_camp:
+			view.focus_mode = Control.FOCUS_ALL
+			view.pressed.connect(_remove_card_at_camp.bind(index))
 		grid.add_child(view)
 	var close := _make_button("CERRAR MAZO" if pile_name.is_empty() else "VOLVER AL COMBATE")
+	if remove_at_camp:
+		close.text = "CANCELAR · VOLVER AL DESCANSO"
 	close.custom_minimum_size.y = 48
 	close.pressed.connect(overlay.queue_free)
 	box.add_child(close)
 	close.grab_focus()
+
+func _remove_card_at_camp(index: int) -> void:
+	if screen != "route" or stage != 3 or run_deck.size() <= 9 or index < 0 or index >= run_deck.size():
+		return
+	if not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("camp_removal", false):
+		return
+	run_deck.remove_at(index)
+	stage = 4
+	show_route()
 
 func _log_combat(entry: String) -> void:
 	combat_log.append("[Turno %d] %s" % [turn, entry])
@@ -527,6 +548,12 @@ func show_route() -> void:
 		var rest := _make_button("Tomar el refugio: recuperar 12 Salud y renunciar al combate y su recompensa")
 		rest.pressed.connect(_rest.bind(12))
 		box.add_child(rest)
+	if stage == 3:
+		var refine := _make_button("Alternativa: retirar una carta del mazo SIN recuperar Salud")
+		refine.name = "RefineDeckButton"
+		refine.disabled = run_deck.size() <= 9
+		refine.pressed.connect(_show_deck.bind("", true))
+		box.add_child(refine)
 	var deck_button := _make_button("VER MAZO")
 	deck_button.pressed.connect(_show_deck)
 	var collection_buttons := HBoxContainer.new()
