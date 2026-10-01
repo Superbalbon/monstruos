@@ -4,6 +4,9 @@ const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
 const CardViewScene = preload("res://src/card_view.gd")
 const RouteEvents = preload("res://src/route_events.gd")
 const CardUpgrades = preload("res://src/card_upgrades.gd")
+const Relics = preload("res://src/relics.gd")
+var coins := 0
+var relics: Array[String] = []
 var save_store = preload("res://src/run_save.gd").new()
 var persistence_enabled := true
 var save_failed := false
@@ -232,8 +235,10 @@ func _checkpoint(state: String) -> void:
 	if not persistence_enabled:
 		return
 	var version := 2 if run_deck.any(func(id: String): return id.ends_with("+")) else 1
+	if coins > 0 or not relics.is_empty():
+		version = 3
 	save_failed = not save_store.write({"version": version, "state": state, "faction": selected_faction,
-		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck})
+		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck, "coins": coins, "relics": relics})
 	if save_failed:
 		var warning := _make_label("No se pudo guardar. " + save_store.last_error, 16, Color("ee6b7a"))
 		warning.position = Vector2(12, 2)
@@ -245,6 +250,8 @@ func _resume_run() -> void:
 		show_title_screen()
 		return
 	selected_faction = saved.faction
+	coins = int(saved.get("coins", 0)) if saved.version == 3 else 0
+	relics.assign(saved.get("relics", []) if saved.version == 3 else [])
 	run_deck.assign(saved.deck)
 	player_hp = int(saved.hp)
 	stage = int(saved.stage)
@@ -703,6 +710,8 @@ func _request_start_run(faction: String) -> void:
 	dialog.get_cancel_button().grab_focus()
 
 func start_run(faction: String) -> void:
+	coins = 0
+	relics.clear()
 	selected_faction = faction
 	run_deck.assign(STARTER_DECKS[faction])
 	player_hp = MAX_HP
@@ -720,8 +729,13 @@ func _journey_panel(title: String, description: String) -> VBoxContainer:
 	center.add_child(box)
 	box.add_child(_make_label(title, 32, Color("d8bd79")))
 	box.add_child(_make_label(description, 18))
-	box.add_child(_make_label("%s · Salud %d/%d · Mazo %d cartas" % [selected_faction, player_hp, MAX_HP, run_deck.size()], 18))
+	var status := _make_label(_journey_status(), 18)
+	status.name = "JourneyStatus"
+	box.add_child(status)
 	return box
+
+func _journey_status() -> String:
+	return "%s · Salud %d/%d · Mazo %d · %s: %d · Reliquias: %d" % [selected_faction, player_hp, MAX_HP, run_deck.size(), Relics.CURRENCIES[selected_faction], coins, relics.size()]
 
 func show_route() -> void:
 	screen = "route"
@@ -780,17 +794,96 @@ func show_route() -> void:
 	var guide := _make_button("GUÍA DE REGLAS")
 	guide.pressed.connect(_show_rules)
 	collection_buttons.add_child(guide)
+	var merchant := _make_button("MERCADER" if stage in [1, 3] else "RELIQUIAS", 16)
+	merchant.name = "RelicsButton"
+	merchant.pressed.connect(_show_relics)
+	collection_buttons.add_child(merchant)
 	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
 	menu.pressed.connect(_request_menu)
 	box.add_child(menu)
 	_checkpoint("route")
 	_add_save_status(box)
 
+func _show_relics() -> void:
+	if screen not in ["route", "battle", "won", "lost"] or choosing_card or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+		return
+	var shop := screen == "route" and stage in [1, 3]
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_meta("relic_shop", shop)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 28)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	margin.add_child(box)
+	box.add_child(_make_label("MERCADER DE VALDEGRÍS" if shop else "RELIQUIAS DE LA EXPEDICIÓN", 30, Color("d8bd79")))
+	box.add_child(_make_label("%s: %d · Reliquias: %d/3" % [Relics.CURRENCIES[selected_faction], coins, relics.size()], 22))
+	var explanation := _make_label("Efectos pasivos, sin cartas ni coste de Ímpetu. Cada compra es definitiva y se guarda al instante. Solo duran esta expedición.\nEl mercader vende en el cruce y en el descanso antes del jefe; comprar no consume el descanso.", 17)
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(explanation)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 18)
+	scroll.add_child(list)
+	for id in Relics.ITEMS:
+		var item: Dictionary = Relics.ITEMS[id]
+		if item.faction != selected_faction:
+			continue
+		var description := _make_label("%s · %d %s\n%s" % [item.name, item.price, Relics.CURRENCIES[selected_faction], item.text], 20)
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		list.add_child(description)
+		var buy := _make_button("ADQUIRIDA" if id in relics else ("COMPRAR" if shop else "Disponible en el mercader"), 18)
+		buy.name = "Buy_" + id
+		buy.disabled = not shop or id in relics or coins < int(item.price)
+		buy.tooltip_text = "No permite duplicados." if id in relics else "Precio: %d. Saldo restante: %d." % [item.price, coins - int(item.price)]
+		if coins < int(item.price) and id not in relics:
+			buy.tooltip_text = "Te faltan %d %s." % [int(item.price) - coins, Relics.CURRENCIES[selected_faction]]
+		buy.pressed.connect(_buy_relic.bind(str(id)))
+		list.add_child(buy)
+	if save_failed:
+		box.add_child(_make_label("No se pudo guardar. Si intentaste comprar, la compra no se ha aplicado; puedes reintentarlo.", 17, Color("ee6b7a")))
+	var close := _make_button("CERRAR · VOLVER")
+	close.name = "CloseRelics"
+	close.custom_minimum_size.y = 48
+	close.pressed.connect(overlay.queue_free)
+	box.add_child(close)
+	close.grab_focus()
+
+func _buy_relic(id: String) -> void:
+	if screen != "route" or stage not in [1, 3] or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("relic_shop", false):
+		return
+	if not Relics.ITEMS.has(id) or id in relics:
+		return
+	var item: Dictionary = Relics.ITEMS[id]
+	if item.faction != selected_faction or coins < int(item.price):
+		return
+	coins -= int(item.price)
+	relics.append(id)
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		coins += int(item.price)
+		relics.erase(id)
+	var old := get_node("DeckOverlay")
+	remove_child(old)
+	old.queue_free()
+	var status = find_child("JourneyStatus", true, false)
+	if status != null:
+		status.text = _journey_status()
+	_show_relics()
+
 func _encounter_briefing_text(encounter_stage: int) -> String:
 	if not ENCOUNTERS.has(encounter_stage):
 		return ""
 	var encounter: Dictionary = ENCOUNTERS[encounter_stage]
 	var lines: Array[String] = ["%s · %d Salud" % [encounter.name, encounter.hp], "", "SECUENCIA DE ACCIONES BASE"]
+	lines.insert(1, "Victoria: +%d %s" % [Relics.REWARDS[encounter_stage], Relics.CURRENCIES[selected_faction]])
 	var pattern: Array = ENEMY_PATTERNS[encounter_stage]
 	for index in pattern.size():
 		var action: Dictionary = pattern[index]
@@ -1046,6 +1139,9 @@ func _build_battle_screen() -> void:
 	var guide_button := _make_button("REGLAS", 16)
 	guide_button.pressed.connect(_show_rules)
 	header.add_child(guide_button)
+	var relic_button := _make_button("RELIQUIAS", 16)
+	relic_button.pressed.connect(_show_relics)
+	header.add_child(relic_button)
 	var menu_button := _make_button("SALIR AL MENÚ", 16)
 	menu_button.tooltip_text = "Al continuar se reiniciará este combate desde el último guardado."
 	menu_button.pressed.connect(_request_menu)
@@ -1140,6 +1236,21 @@ func _begin_player_turn() -> void:
 		player_block = 0
 	energy = MAX_ENERGY
 	last_attack_damage = 0
+	if turn == 1:
+		player_block += Relics.bonus(relics, "block")
+		energy += Relics.bonus(relics, "energy")
+		consecrated += Relics.bonus(relics, "consecration")
+		if selected_faction == "Hombres Lobo":
+			faction_resource += Relics.bonus(relics, "fury")
+		elif selected_faction == "Fantasmas":
+			faction_resource += Relics.bonus(relics, "ectoplasm")
+		if not relics.is_empty():
+			var names: Array[String] = []
+			for id in relics:
+				if Relics.ITEMS[id].effect != "heal":
+					names.append(Relics.ITEMS[id].name)
+			if not names.is_empty():
+				_log_combat("Reliquias iniciales aplicadas: " + ", ".join(names))
 	last_attack_card.clear()
 	_set_enemy_intent()
 	if "L007" in active_powers:
@@ -1768,6 +1879,15 @@ func _finish_battle(victory: bool) -> void:
 		return
 	screen = "won" if victory else "lost"
 	battle_over = true
+	if victory:
+		var earned: int = Relics.REWARDS.get(stage, 0)
+		coins += earned
+		_log_combat("Botín: +%d %s (total: %d)." % [earned, Relics.CURRENCIES[selected_faction], coins])
+		var healing := Relics.bonus(relics, "heal")
+		if healing > 0:
+			var previous_hp := player_hp
+			_heal_health(healing)
+			_log_combat("Reliquia de socorro: recuperas %d Salud." % [player_hp - previous_hp])
 	hand.clear()
 	_refresh_battle()
 	message_label.text = "VICTORIA · La niebla retrocede ante Valdegrís." if victory else "DERROTA · La Desvelada reclama otro recuerdo."
@@ -1787,6 +1907,8 @@ func _finish_battle(victory: bool) -> void:
 			message_label.text = "VICTORIA · Has llegado a Santa Vigilia y vencido al Custodio."
 		end_turn_button.pressed.connect(show_faction_selection)
 	_log_combat(message_label.text)
+	if victory:
+		message_label.text += " · +%d %s" % [Relics.REWARDS.get(stage, 0), Relics.CURRENCIES[selected_faction]]
 	var summary := _make_label(_combat_summary_text(), 20, Color("d7d9df"))
 	summary.name = "CombatSummary"
 	summary.tooltip_text = "Solo este combate. Daño y curación efectivos, sin exceso sobre la Salud disponible. Sangrado se muestra aparte del daño directo. Etéreo cuenta el golpe ya reducido por Débil y Posesión."

@@ -59,6 +59,41 @@ No requiere complementos ni recursos externos.
 
 ## Ruta del prototipo
 
+### Moneda, mercader y reliquias
+
+Cada victoria concede moneda temática: **Reales** para Humanos, **Colmillos de
+caza** para Hombres Lobo, **Sellos de sangre** para Vampiros y **Ecos** para
+Fantasmas. Tienen el mismo valor: aldea 20, Acechador 30, estación 25 y Custodio
+40. El refugio, la ermita y el descanso no dan moneda. El botín se guarda antes
+de elegir carta; cargar una recompensa pendiente no vuelve a concederlo.
+
+El **Mercader** vende en el cruce posterior a la aldea y en el descanso antes
+del jefe. Comprar no consume la elección de ruta ni la del descanso. Cada
+estirpe tiene tres reliquias únicas; sus efectos son pasivos, no cartas:
+
+| Estirpe | Especial — 35 | Defensa — 30 | Recuperación — 20 |
+|---|---|---|---|
+| Humanos | Cruz del Alba: 1 Consagración inicial | Anillo del Guardián | Medalla del Socorro |
+| Hombres Lobo | Tótem de la Sierra: 2 Furia inicial | Amuleto de Hueso | Colmillo del Retorno |
+| Vampiros | Sortija de Montenegro: +1 Ímpetu en el primer turno | Camafeo del Velo | Cáliz del Regreso |
+| Fantasmas | Reloj Detenido: 2 Ectoplasma inicial | Cadena del Umbral | Espejo del Recuerdo |
+
+Todas las defensivas dan 4 Bloqueo solo en el primer turno de cada combate;
+las de recuperación curan 3 Salud después de vencer, sin superar 50. Los
+efectos iniciales se reaplican en cada nuevo combate, no en cada turno. No hay
+duplicados. **Reliquias** permite consultar la colección y sus efectos desde
+la ruta o el combate; fuera del mercader no permite comprar.
+
+Las compras son definitivas durante la expedición y se guardan inmediatamente.
+Si falla la escritura se revierte la compra y se muestra un aviso. Moneda y
+reliquias se reinician al comenzar otra expedición; no son progreso permanente.
+El guardado con economía usa la versión 3: conserva mejoras de cartas, y carga
+guardados antiguos sin moneda ni reliquias, sin botín retroactivo. No cargues
+estos nuevos guardados en versiones antiguas del juego. Precios y balance
+son provisionales; ningún enemigo exige comprar una reliquia para acceder.
+
+### Encuentros y decisiones
+
 **Ver rival**, junto al combate disponible, permite consultar su Salud y la
 secuencia de acciones base antes de entrar. La secuencia se repite; el daño
 indicado es por golpe, antes de estados y Bloqueo. Durante la lucha, la intención
@@ -386,6 +421,9 @@ Pruebas de los cuatro epílogos, acceso tras victoria final y consulta sin cambi
 
 Pruebas de información previa de rivales y conservación de la ruta:
 `godot --headless --path . --script res://tests/briefing_tests.gd`.
+
+Pruebas de moneda, doce reliquias, efectos pasivos, compras y migración de guardados:
+`godot --headless --path . --script res://tests/economy_tests.gd`.
 
 Pruebas de consulta del mazo y copias disponibles en recompensas:
 `godot --headless --path . --script res://tests/reward_consultation_tests.gd`.

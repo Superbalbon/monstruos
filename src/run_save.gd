@@ -1,6 +1,7 @@
 extends RefCounted
 
 const CardUpgrades = preload("res://src/card_upgrades.gd")
+const Relics = preload("res://src/relics.gd")
 
 var path := "user://expedicion.json"
 var last_error := ""
@@ -41,11 +42,28 @@ func read(cards: Dictionary, starters: Dictionary, rewards: Dictionary) -> Dicti
 func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dictionary) -> bool:
 	if not value is Dictionary:
 		return false
-	if (value.get("version") != 1 and value.get("version") != 2) or value.get("state") not in ["route", "reward", "finished"]:
+	var version: Variant = value.get("version")
+	if not (version is int or version is float) or not is_finite(float(version)) or float(version) != floor(float(version)):
+		return false
+	if int(version) not in [1, 2, 3] or value.get("state") not in ["route", "reward", "finished"]:
 		return false
 	var faction: Variant = value.get("faction")
 	if not faction is String or not starters.has(faction):
 		return false
+	if value.version == 3:
+		var coins: Variant = value.get("coins")
+		if not (coins is int or coins is float) or not is_finite(float(coins)) or float(coins) != floor(float(coins)) or coins < 0 or coins > 10000:
+			return false
+		var relics: Variant = value.get("relics")
+		if not relics is Array or relics.size() > 3:
+			return false
+		var seen: Array[String] = []
+		for id in relics:
+			if not id is String or not Relics.ITEMS.has(id) or id in seen:
+				return false
+			if Relics.ITEMS[id].faction != faction:
+				return false
+			seen.append(id)
 	for key in ["stage", "hp"]:
 		var number: Variant = value.get(key)
 		if not (number is int or number is float) or not is_finite(float(number)) or float(number) != floor(float(number)):
@@ -69,7 +87,7 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 		if id.ends_with("+"):
 			id = id.trim_suffix("+")
 			upgrades += 1
-			if value.version != 2 or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
+			if int(value.version) not in [2, 3] or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
 				return false
 		if not cards.has(id):
 			return false
