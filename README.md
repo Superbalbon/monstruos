@@ -274,6 +274,11 @@ esto no constituye una prueba de equilibrio de dificultad.
 - **Catálogo de cartas**, en el menú principal y en la ruta, muestra todas las
   cartas implementadas, sin duplicados y filtradas por facción. Cada carta indica
   si pertenece al mazo inicial, si se obtiene como recompensa o ambas cosas.
+  El selector **Cartas base / Cartas mejoradas (+)** permite consultar las 40
+  mejoras; su tooltip compara el efecto y coste con la versión base. El buscador
+  filtra por nombre, tipo, rareza, etiqueta o efecto, sin distinguir mayúsculas
+  ni tildes. Los filtros se combinan y el contador muestra las coincidencias.
+  Las versiones mejoradas son previsualizaciones: se consiguen en el descanso.
   Consultarlo no añade cartas ni modifica el guardado. Se cierra con su botón
   o con **Esc**; las cartas aún pendientes de implementar no aparecen.
 - En combate, **Salir al menú** (o **Esc**) abre una confirmación que explica
@@ -318,6 +323,9 @@ Pruebas de las nuevas cartas y del ciclo de vida de Barricada:
 
 Pruebas del catálogo, sus filtros, procedencia de cartas y consulta sin cambios:
 `godot --headless --path . --script res://tests/catalog_tests.gd`.
+
+Pruebas de las 40 previsualizaciones mejoradas y búsqueda combinada:
+`godot --headless --path . --script res://tests/catalog_upgrade_tests.gd`.
 
 Pruebas de patrones, intenciones y ataques múltiples:
 `godot --headless --path . --script res://tests/enemy_tests.gd`.

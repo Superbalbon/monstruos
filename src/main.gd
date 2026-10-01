@@ -410,14 +410,28 @@ func _show_catalog() -> void:
 	box.add_theme_constant_override("separation", 12)
 	margin.add_child(box)
 	box.add_child(_make_label("CATÁLOGO · CARTAS JUGABLES", 28, Color("d8bd79")))
-	var explanation := _make_label("Consulta las cartas disponibles. No modifica tu mazo. Las recompensas se eligen tras vencer.", 17)
+	var explanation := _make_label("Consulta versiones base o mejoradas sin modificar tu mazo. Las mejoras se obtienen en el descanso.", 17)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(explanation)
 	var filter := OptionButton.new()
 	filter.name = "FactionFilter"
 	for faction in STARTER_DECKS:
 		filter.add_item(faction)
-	box.add_child(filter)
+	var filters := HBoxContainer.new()
+	box.add_child(filters)
+	filter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filters.add_child(filter)
+	var version := OptionButton.new()
+	version.name = "VersionFilter"
+	version.add_item("Cartas base")
+	version.add_item("Cartas mejoradas (+)")
+	version.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filters.add_child(version)
+	var search := LineEdit.new()
+	search.name = "CatalogSearch"
+	search.placeholder_text = "Buscar por nombre, tipo, etiqueta o efecto…"
+	search.clear_button_enabled = true
+	box.add_child(search)
 	var count := _make_label("", 16)
 	count.name = "CardCount"
 	box.add_child(count)
@@ -432,7 +446,15 @@ func _show_catalog() -> void:
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
 	filter.item_selected.connect(func(index: int):
-		_fill_catalog(grid, count, filter.get_item_text(index))
+		_fill_catalog(grid, count, filter.get_item_text(index), version.selected == 1, search.text)
+		scroll.scroll_vertical = 0
+	)
+	version.item_selected.connect(func(index: int):
+		_fill_catalog(grid, count, filter.get_item_text(filter.selected), index == 1, search.text)
+		scroll.scroll_vertical = 0
+	)
+	search.text_changed.connect(func(query: String):
+		_fill_catalog(grid, count, filter.get_item_text(filter.selected), version.selected == 1, query)
 		scroll.scroll_vertical = 0
 	)
 	var factions: Array = STARTER_DECKS.keys()
@@ -445,7 +467,10 @@ func _show_catalog() -> void:
 	box.add_child(close)
 	close.grab_focus()
 
-func _fill_catalog(grid: GridContainer, count: Label, faction: String) -> void:
+func _catalog_search_text(value: String) -> String:
+	return value.to_lower().replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ü", "u").replace("ñ", "n")
+
+func _fill_catalog(grid: GridContainer, count: Label, faction: String, upgraded := false, query := "") -> void:
 	for child in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
@@ -454,20 +479,33 @@ func _fill_catalog(grid: GridContainer, count: Label, faction: String) -> void:
 		if id not in ids:
 			ids.append(id)
 	ids.sort()
-	count.text = "%s · %d cartas base · consulta en su ayuda qué mejoras están disponibles" % [faction, ids.size()]
+	var shown := 0
+	var term := _catalog_search_text(query.strip_edges())
 	for id in ids:
+		var card := CardUpgrades.resolve(cards_by_id, id + ("+" if upgraded else ""))
+		var searchable := _catalog_search_text("%s %s %s %s %s" % [card.nombre, card.tipo, card.rareza, card.efecto, " ".join(card.etiquetas)])
+		if not term.is_empty() and term not in searchable:
+			continue
+		shown += 1
 		var entry := VBoxContainer.new()
 		grid.add_child(entry)
 		var view := CardViewScene.new()
-		view.setup(cards_by_id[id], FACTION_COLORS[faction], _card_art_path(cards_by_id[id]))
+		view.setup(card, FACTION_COLORS[faction], _card_art_path(card))
+		if upgraded:
+			view.tooltip_text = "VISTA PREVIA · no modifica tu mazo\nACTUAL: " + str(cards_by_id[id].efecto) + "\nMEJORADA: " + str(card.efecto) + "\nCoste: %d → %d" % [int(cards_by_id[id].coste), int(card.coste)]
 		view.focus_mode = Control.FOCUS_NONE
 		entry.add_child(view)
 		var starter: bool = id in STARTER_DECKS[faction]
 		var reward: bool = id in REWARDS[faction]
 		var source := "Inicial + recompensa" if starter and reward else ("Mazo inicial" if starter else "Solo recompensa")
+		if upgraded:
+			source = "Mejora en descanso"
 		var label := _make_label(source, 15, FACTION_COLORS[faction])
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		entry.add_child(label)
+	count.text = "%s · %d de %d cartas %s" % [faction, shown, ids.size(), "mejoradas (+)" if upgraded else "base"]
+	if shown == 0:
+		grid.add_child(_make_label("Sin coincidencias. Borra la búsqueda o cambia de facción.", 18))
 
 func _show_rules() -> void:
 	if choosing_card or has_node("RulesOverlay") or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
