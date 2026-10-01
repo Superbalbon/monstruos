@@ -283,7 +283,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 			description = advice[starter_faction] + "\nSolo consulta: no inicia ni sustituye una expedición."
 		elif remove_at_camp:
 			heading = "RETIRAR UNA CARTA"
-			description = "Selecciona una copia para retirarla de esta expedición. Avanzarás al jefe SIN recuperar Salud."
+			description = "Selecciona una copia y confirma su retirada. Avanzarás al jefe SIN recuperar Salud."
 		elif upgrade_at_camp:
 			heading = "MEJORAR UNA CARTA"
 			description = "Selecciona una copia: se muestra su versión mejorada (+). Avanzarás SIN curarte. Las mejoras pendientes están desactivadas."
@@ -349,7 +349,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 		view.focus_mode = Control.FOCUS_NONE
 		if remove_at_camp:
 			view.focus_mode = Control.FOCUS_ALL
-			view.pressed.connect(_remove_card_at_camp.bind(index))
+			view.pressed.connect(_request_card_removal.bind(index))
 		elif upgrade_at_camp:
 			view.disabled = not eligible
 			view.focus_mode = Control.FOCUS_ALL
@@ -376,6 +376,31 @@ func _upgrade_card_at_camp(index: int) -> void:
 	run_deck[index] += "+"
 	stage = 4
 	show_route()
+
+func _request_card_removal(index: int) -> void:
+	if screen != "route" or stage != 3 or run_deck.size() <= 9 or index < 0 or index >= run_deck.size():
+		return
+	if has_node("RemovalConfirmation") or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("camp_removal", false):
+		return
+	var card := CardUpgrades.resolve(cards_by_id, run_deck[index])
+	var original_deck := run_deck.duplicate()
+	var dialog := ConfirmationDialog.new()
+	dialog.name = "RemovalConfirmation"
+	dialog.title = "¿Retirar esta copia?"
+	dialog.dialog_autowrap = true
+	dialog.dialog_text = "%s · Coste %d\n%s\n\nRetirarás una sola copia de esta expedición.\nEl mazo pasará de %d a %d cartas.\nAvanzarás al monasterio SIN recuperar Salud.\nNo podrás mejorar otra carta en este descanso." % [card.nombre, card.coste, card.efecto, run_deck.size(), run_deck.size() - 1]
+	dialog.ok_button_text = "Retirar y continuar"
+	dialog.cancel_button_text = "Conservar carta"
+	dialog.confirmed.connect(func():
+		if not dialog.is_queued_for_deletion() and run_deck == original_deck:
+			_remove_card_at_camp(index)
+		if is_instance_valid(dialog):
+			dialog.queue_free()
+	)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(720, 300))
+	dialog.get_cancel_button().grab_focus()
 
 func _remove_card_at_camp(index: int) -> void:
 	if screen != "route" or stage != 3 or run_deck.size() <= 9 or index < 0 or index >= run_deck.size():
@@ -570,7 +595,9 @@ func _request_menu() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not event.is_echo():
-		if has_node("NewRunConfirmation"):
+		if has_node("RemovalConfirmation"):
+			get_node("RemovalConfirmation").queue_free()
+		elif has_node("NewRunConfirmation"):
 			get_node("NewRunConfirmation").queue_free()
 		elif has_node("RulesOverlay"):
 			get_node("RulesOverlay").close()

@@ -51,6 +51,23 @@ func run() -> void:
 		var copies: int = game.run_deck.count(id)
 		var views = game.get_node("DeckOverlay").find_children("*", "Button", true, false)
 		views[0].pressed.emit()
+		var dialog = game.get_node("RemovalConfirmation")
+		var saved_before := FileAccess.get_file_as_string(path)
+		check(game.run_deck.size() == 10 and game.stage == 3, "Seleccionar aún no retira")
+		check(game.cards_by_id[id].nombre in dialog.dialog_text and "10 a 9" in dialog.dialog_text, "Confirma carta y tamaño final")
+		check(dialog.get_cancel_button().has_focus(), "Conservar carta por defecto")
+		game._request_card_removal(1)
+		check(game.get_node("RemovalConfirmation") == dialog, "No duplica confirmación")
+		game._unhandled_key_input(cancel)
+		await process_frame
+		check(not game.has_node("RemovalConfirmation") and game.has_node("DeckOverlay"), "Escape vuelve al selector sin cerrarlo")
+		check(FileAccess.get_file_as_string(path) == saved_before and game.run_deck.size() == 10, "Cancelar conserva archivo y mazo")
+		views[0].pressed.emit()
+		game.get_node("RemovalConfirmation").canceled.emit()
+		await process_frame
+		check(game.stage == 3 and game.player_hp == 22, "Botón conservar no consume descanso")
+		views[0].pressed.emit()
+		game.get_node("RemovalConfirmation").confirmed.emit()
 		check(game.run_deck.size() == 9 and game.run_deck.count(id) == copies - 1, "Retira solo una copia")
 		check(game.stage == 4 and game.player_hp == 22, "Retirar no cura y avanza")
 		game._remove_card_at_camp(0)
@@ -64,11 +81,22 @@ func run() -> void:
 		saved.stage = 2
 		check(not game.save_store.valid(saved, game.cards_by_id, game.STARTER_DECKS, game.REWARDS), "No acepta nueve cartas antes del descanso")
 	game.start_run("Humanos")
+	game._request_card_removal(0)
+	check(not game.has_node("RemovalConfirmation"), "No confirma retirada fuera del descanso")
 	game.stage = 3
 	game.player_hp = 22
 	game.show_route()
 	game._enter_stage()
 	check(game.player_hp == 37 and game.run_deck.size() == 10 and game.stage == 4, "Curación sigue disponible")
+	game.start_run("Humanos")
+	game.stage = 3
+	game._show_deck("", true)
+	game._request_card_removal(0)
+	game.run_deck.reverse()
+	var changed_deck = game.run_deck.duplicate()
+	game.get_node("RemovalConfirmation").confirmed.emit()
+	await process_frame
+	check(game.run_deck == changed_deck and game.stage == 3, "Confirmación obsoleta no retira otra copia")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	game.queue_free()
 	other.queue_free()

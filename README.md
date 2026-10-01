@@ -96,6 +96,11 @@ mismo descanso. El mazo puede quedar en 9 cartas. Los guardados anteriores
 siguen funcionando en esta versión; no uses una versión antigua para cargar
 una expedición cuyo mazo haya quedado reducido a 9 cartas.
 
+Al pulsar una carta para retirarla se abre una confirmación con su nombre,
+efecto, coste y tamaño final del mazo. **Conservar carta** (opción enfocada por
+defecto) o **Esc** vuelve al selector sin gastar el descanso ni cambiar el
+guardado. Solo **Retirar y continuar** elimina la copia y avanza sin curarte.
+
 Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
