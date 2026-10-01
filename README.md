@@ -298,7 +298,12 @@ esto no constituye una prueba de equilibrio de dificultad.
 - Cerrar durante un combate permite reintentarlo desde el punto de control previo,
   con la Salud previa y un nuevo barajado; no se recupera el turno exacto.
 - `Continuar` restaura facción, Salud, etapa y mazo. Elegir estirpe para una nueva
-  expedición sustituye la anterior, tal como indica el menú.
+  expedición pide confirmar antes de sustituir una partida pendiente. El diálogo
+  muestra facción, etapa, Salud, tamaño del mazo y si queda una recompensa por
+  elegir. **Conservar partida** o **Esc** cancela sin escribir el guardado.
+  También se confirma antes de sobrescribir un guardado dañado o incompatible.
+  Sin guardado o con una expedición finalizada, el inicio es directo. Esc en la
+  selección de estirpe vuelve al menú.
 - `Ver mazo` muestra todas las copias de la expedición desde la ruta y el combate.
   Incluye un resumen por tipo, número de copias mejoradas, distribución de costes
   (0, 1, 2 y 3 o más) y coste medio. Cuenta los costes impresos de las versiones
@@ -321,6 +326,8 @@ esto no constituye una prueba de equilibrio de dificultad.
   temporal precede al reemplazo del archivo; un fallo se muestra en pantalla.
 
 Pruebas adicionales: `godot --headless --path . --script res://tests/save_tests.gd`.
+Confirmación de sustitución y cancelación sin cambios:
+`godot --headless --path . --script res://tests/new_run_tests.gd`.
 Las pruebas usan archivos exclusivos en `.godot/` y no modifican la partida real.
 
 El mazo inicial de Fantasmas incorpora Ectoplasma Frío para poder activar Eco

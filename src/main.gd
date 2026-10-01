@@ -216,7 +216,7 @@ func show_title_screen() -> void:
 		resume.custom_minimum_size.y = 58
 		resume.pressed.connect(_resume_run)
 		content.add_child(resume)
-		content.add_child(_make_label("Una nueva expedición sustituye el guardado al elegir estirpe.", 16))
+		content.add_child(_make_label("Al elegir estirpe se pedirá confirmar la sustitución del guardado.", 16))
 	if not save_store.last_error.is_empty():
 		content.add_child(_make_label(save_store.last_error, 16, Color("ee6b7a")))
 	if save_failed:
@@ -548,7 +548,9 @@ func _request_menu() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not event.is_echo():
-		if has_node("RulesOverlay"):
+		if has_node("NewRunConfirmation"):
+			get_node("NewRunConfirmation").queue_free()
+		elif has_node("RulesOverlay"):
 			get_node("RulesOverlay").close()
 		elif has_node("CatalogOverlay"):
 			get_node("CatalogOverlay").queue_free()
@@ -556,6 +558,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			get_node("DeckOverlay").queue_free()
 		elif screen == "event":
 			show_route()
+		elif screen == "faction":
+			show_title_screen()
 		elif screen in ["battle", "route", "reward"]:
 			_request_menu()
 		get_viewport().set_input_as_handled()
@@ -569,6 +573,7 @@ func _add_save_status(box: VBoxContainer) -> void:
 	box.add_child(label)
 
 func show_faction_selection() -> void:
+	screen = "faction"
 	_clear_screen()
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -609,12 +614,40 @@ func show_faction_selection() -> void:
 		box.add_child(role)
 		var choose := _make_button("JUGAR", 18)
 		choose.custom_minimum_size = Vector2(0, 48)
-		choose.pressed.connect(start_run.bind(faction))
+		choose.pressed.connect(_request_start_run.bind(faction))
 		box.add_child(choose)
 
 	var back := _make_button("Volver", 16)
 	back.pressed.connect(show_title_screen)
 	root.add_child(back)
+
+func _request_start_run(faction: String) -> void:
+	if screen != "faction" or not STARTER_DECKS.has(faction) or has_node("NewRunConfirmation"):
+		return
+	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS) if persistence_enabled else {}
+	var existing := persistence_enabled and FileAccess.file_exists(save_store.path)
+	if not existing or (not saved.is_empty() and saved.state == "finished"):
+		start_run(faction)
+		return
+	var dialog := ConfirmationDialog.new()
+	dialog.name = "NewRunConfirmation"
+	dialog.title = "¿Sustituir la expedición guardada?"
+	var previous := "Existe un guardado dañado o incompatible. Se sobrescribirá."
+	if not saved.is_empty():
+		previous = "%s · Etapa %d · Salud %d/%d · %d cartas" % [saved.faction, int(saved.stage) + 1, int(saved.hp), MAX_HP, saved.deck.size()]
+		if saved.state == "reward":
+			previous += "\nHay una recompensa pendiente de elegir."
+	dialog.dialog_text = previous + "\n\nEmpezar con %s sustituirá esa partida.\nNo podrás recuperar la expedición anterior desde el juego." % faction
+	dialog.ok_button_text = "Sustituir y empezar"
+	dialog.cancel_button_text = "Conservar partida"
+	dialog.confirmed.connect(func():
+		if screen == "faction" and not dialog.is_queued_for_deletion():
+			start_run(faction)
+	)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(680, 260))
+	dialog.get_cancel_button().grab_focus()
 
 func start_run(faction: String) -> void:
 	selected_faction = faction
