@@ -59,6 +59,12 @@ No requiere complementos ni recursos externos.
 
 ## Ruta del prototipo
 
+**Ver rival**, junto al combate disponible, permite consultar su Salud y la
+secuencia de acciones base antes de entrar. La secuencia se repite; el daño
+indicado es por golpe, antes de estados y Bloqueo. Durante la lucha, la intención
+actual refleja los modificadores. **Esc** o **Volver a la ruta** cierra la
+consulta sin iniciar el encuentro, gastar Salud ni cambiar el guardado.
+
 Después de la aldea, **Investigar la ermita** abre el primer encuentro narrativo,
 «La ermita de los nombres», con una perspectiva distinta para cada estirpe.
 Puedes entregar 8 Salud (necesitas al menos 9) para obtener Milicia Organizada,
@@ -372,6 +378,9 @@ Pruebas de consulta de los cuatro mazos iniciales sin modificar la expedición:
 
 Pruebas de los cuatro epílogos, acceso tras victoria final y consulta sin cambios:
 `godot --headless --path . --script res://tests/epilogue_tests.gd`.
+
+Pruebas de información previa de rivales y conservación de la ruta:
+`godot --headless --path . --script res://tests/briefing_tests.gd`.
 
 Pruebas de consulta del mazo y copias disponibles en recompensas:
 `godot --headless --path . --script res://tests/reward_consultation_tests.gd`.

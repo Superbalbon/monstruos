@@ -61,6 +61,10 @@ func run() -> void:
 		await process_frame
 		check(other.has_node("DeckOverlay"), "Visor de mazo")
 		other._enter_stage()
+		check(other.screen == "route", "Visor bloquea entrada subyacente al combate")
+		other.get_node("DeckOverlay").queue_free()
+		await process_frame
+		other._enter_stage()
 		other._finish_battle(false)
 		game._resume_run()
 		check(game.screen == "title", "Derrota no continuable")

@@ -38,6 +38,12 @@ var run_deck: Array[String] = []
 var stage := 0
 var screen := "title"
 var encounter_name := "EL DESVELADO"
+const ENCOUNTERS := {
+	0: {"name": "EL DESVELADO", "hp": 36},
+	1: {"name": "EL ACECHADOR", "hp": 40},
+	2: {"name": "EL GUARDAGUJAS", "hp": 44},
+	4: {"name": "EL CUSTODIO", "hp": 58}
+}
 const ENEMY_PATTERNS := {
 	0: [{"damage": 7}, {"damage": 10}, {"block": 7}, {"damage": 13}],
 	1: [{"damage": 4, "hits": 2}, {"block": 4}, {"damage": 12}],
@@ -699,7 +705,16 @@ func show_route() -> void:
 		button.disabled = index != stage
 		button.custom_minimum_size.y = 48
 		button.pressed.connect(_enter_stage)
-		box.add_child(button)
+		var row := HBoxContainer.new()
+		box.add_child(row)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(button)
+		if ENCOUNTERS.has(index):
+			var inspect := _make_button("VER RIVAL", 16)
+			inspect.name = "InspectEncounter_" + str(index)
+			inspect.disabled = index != stage
+			inspect.pressed.connect(_show_encounter_briefing)
+			row.add_child(inspect)
 	if stage == 1:
 		var alternatives := HBoxContainer.new()
 		box.add_child(alternatives)
@@ -744,8 +759,61 @@ func show_route() -> void:
 	_checkpoint("route")
 	_add_save_status(box)
 
+func _encounter_briefing_text(encounter_stage: int) -> String:
+	if not ENCOUNTERS.has(encounter_stage):
+		return ""
+	var encounter: Dictionary = ENCOUNTERS[encounter_stage]
+	var lines: Array[String] = ["%s · %d Salud" % [encounter.name, encounter.hp], "", "SECUENCIA DE ACCIONES BASE"]
+	var pattern: Array = ENEMY_PATTERNS[encounter_stage]
+	for index in pattern.size():
+		var action: Dictionary = pattern[index]
+		var parts: Array[String] = []
+		if action.has("damage"):
+			parts.append("Ataca por %d × %d" % [action.damage, action.get("hits", 1)])
+		if action.has("block"):
+			parts.append("gana %d Bloqueo" % action.block)
+		if action.has("weak"):
+			parts.append("te aplica %d Débil" % action.weak)
+		if action.get("ethereal", false):
+			parts.append("obtiene Etéreo")
+		lines.append("%d. %s" % [index + 1, " · ".join(parts)])
+	lines.append("\nLa secuencia se repite. Los valores de ataque son por golpe, antes de estados y Bloqueo. Durante el combate consulta la intención actual: Débil y Posesión pueden reducir el daño.")
+	if encounter_stage in [1, 4]:
+		lines.append("Etéreo evita solo un golpe, no todo un ataque múltiple.")
+	return "\n".join(lines)
+
+func _show_encounter_briefing() -> void:
+	if screen != "route" or not ENCOUNTERS.has(stage) or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+		return
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 32)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 18)
+	margin.add_child(box)
+	box.add_child(_make_label("ANTES DEL COMBATE", 30, Color("d8bd79")))
+	var info := RichTextLabel.new()
+	info.name = "EncounterBriefing"
+	info.bbcode_enabled = false
+	info.text = _encounter_briefing_text(stage)
+	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_theme_font_size_override("normal_font_size", 22)
+	box.add_child(info)
+	box.add_child(_make_label("Solo consulta: no inicia el combate ni modifica la expedición.", 17))
+	var back := _make_button("VOLVER A LA RUTA")
+	back.name = "CloseBriefing"
+	back.custom_minimum_size.y = 48
+	back.pressed.connect(overlay.queue_free)
+	box.add_child(back)
+	back.grab_focus()
+
 func _show_hermitage() -> void:
-	if screen != "route" or stage != 1:
+	if screen != "route" or stage != 1 or has_node("DeckOverlay"):
 		return
 	screen = "event"
 	var event: Dictionary = RouteEvents.HERMITAGE[selected_faction]
@@ -794,17 +862,18 @@ func _resolve_hermitage(choice: String) -> void:
 	show_route() # Same checkpoint format: health, card and advanced stage together.
 
 func _enter_stage() -> void:
-	if screen != "route":
+	if screen != "route" or has_node("DeckOverlay"):
 		return
 	if stage == 3:
 		_rest(15)
 		return
-	encounter_name = str({0: "EL DESVELADO", 1: "EL ACECHADOR", 2: "EL GUARDAGUJAS", 4: "EL CUSTODIO"}.get(stage, "EL DESVELADO"))
-	enemy_max_hp = int({0: 36, 1: 40, 2: 44, 4: 58}.get(stage, 36))
+	var encounter: Dictionary = ENCOUNTERS.get(stage, ENCOUNTERS[0])
+	encounter_name = encounter.name
+	enemy_max_hp = encounter.hp
 	start_battle(selected_faction)
 
 func _rest(amount: int) -> void:
-	if screen != "route" or stage not in [1, 3]:
+	if screen != "route" or stage not in [1, 3] or has_node("DeckOverlay"):
 		return
 	player_hp = mini(MAX_HP, player_hp + amount)
 	stage += 1
