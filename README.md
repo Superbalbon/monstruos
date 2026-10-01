@@ -196,6 +196,11 @@ esto no constituye una prueba de equilibrio de dificultad.
 
 ## Guardado y consulta del mazo
 
+- Al ganar o perder aparece un **resumen del combate** con turnos, cartas,
+  Ímpetu gastado, daño directo, Sangrado, Salud perdida, Bloqueo aprovechado,
+  daño evitado por Etéreo y curación efectiva. No cuenta exceso de daño o
+  curación; separa Sed/Descontrol de los ataques enemigos. También se añade al
+  historial para copiarlo. Solo describe ese combate y no se guarda entre sesiones.
 - **Catálogo de cartas**, en el menú principal y en la ruta, muestra todas las
   cartas implementadas, sin duplicados y filtradas por facción. Cada carta indica
   si pertenece al mazo inicial, si se obtiene como recompensa o ambas cosas.
@@ -277,3 +282,6 @@ Pruebas de motivos de bloqueo, costes dinámicos, ayudas y aviso de fin de turno
 
 Pruebas de la guía, navegación por temas, foco, cierre y conservación del combate:
 `godot --headless --path . --script res://tests/guide_tests.gd`.
+
+Pruebas del resumen, daño efectivo, Bloqueo, Etéreo, curación, costes y reinicio:
+`godot --headless --path . --script res://tests/summary_tests.gd`.

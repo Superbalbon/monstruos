@@ -93,6 +93,7 @@ var battle_over := false
 var choosing_card := false
 const COMBAT_LOG_LIMIT := 200
 var combat_log: Array[String] = []
+var combat_stats: Dictionary = {}
 
 var player_status: Label
 var enemy_status: Label
@@ -657,6 +658,9 @@ func _take_reward(id: String) -> void:
 	show_route()
 
 func start_battle(faction: String) -> void:
+	combat_stats = {"cards": 0, "energy": 0, "damage": 0, "bleed": 0,
+		"received": 0, "self_damage": 0, "blocked": 0, "avoided": 0,
+		"healed": 0, "starting_hp": player_hp}
 	selected_faction = faction
 	screen = "battle"
 	draw_pile.clear()
@@ -940,6 +944,8 @@ func _play_card(card: Dictionary) -> void:
 		return
 	var paid_cost := _card_cost(card)
 	energy -= paid_cost
+	combat_stats.cards += 1
+	combat_stats.energy += paid_cost
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V008", "V014", "F001", "F008", "F015"]
 	var action_message: String = str(card["nombre"]) + ": "
@@ -1093,7 +1099,7 @@ func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
 				faction_resource -= 2
 				enemy_bleed += _potency(2, scale)
 		"V005":
-			player_hp = mini(MAX_HP, player_hp + _potency(3, scale))
+			_heal_health(_potency(3, scale))
 			faction_resource = maxi(0, faction_resource - _potency(2, scale))
 		"V006": _gain_thirst(_potency(1, scale))
 		"F004": faction_resource = mini(8, faction_resource + _potency(1, scale))
@@ -1132,7 +1138,7 @@ func _gain_fury(amount: int) -> void:
 	faction_resource = mini(10, faction_resource + amount)
 	if faction_resource == 10:
 		faction_resource = 5
-		player_hp = maxi(0, player_hp - 3)
+		_lose_health(3, "self_damage")
 		temporary_strength += 2
 		_log_combat("Descontrol: coste de 3 Salud, Furia vuelve a 5 y Fuerza +2.")
 
@@ -1147,7 +1153,19 @@ func _deal_damage(amount: int, is_attack := false) -> String:
 	enemy_block -= absorbed
 	var health_damage := mini(enemy_hp, modified - absorbed)
 	enemy_hp = maxi(0, enemy_hp - health_damage)
+	combat_stats.damage += health_damage
 	return "%d de daño." % health_damage
+
+func _lose_health(amount: int, source: String) -> int:
+	var lost := mini(maxi(0, player_hp), maxi(0, amount))
+	player_hp -= lost
+	combat_stats[source] += lost
+	return lost
+
+func _heal_health(amount: int) -> void:
+	var healed := mini(MAX_HP - player_hp, maxi(0, amount))
+	player_hp += healed
+	combat_stats.healed += healed
 
 func _gain_block(amount: int) -> String:
 	player_block += amount
@@ -1241,12 +1259,13 @@ func _end_turn() -> void:
 			break
 		if player_ethereal:
 			player_ethereal = false
+			combat_stats.avoided += incoming
 			_log_combat("Etéreo evita el golpe %d/%d sin consumir Bloqueo." % [hit + 1, enemy_intent_hits])
 			continue
 		var absorbed := mini(player_block, incoming)
 		player_block -= absorbed
-		var health_damage := incoming - absorbed
-		player_hp -= health_damage
+		combat_stats.blocked += absorbed
+		var health_damage := _lose_health(incoming - absorbed, "received")
 		total_damage += health_damage
 		_log_combat("Golpe %d/%d: %d de daño, %d absorbido por Bloqueo, pierdes %d Salud." % [hit + 1, enemy_intent_hits, incoming, absorbed, health_damage])
 		if selected_faction == "Hombres Lobo" and health_damage > 0:
@@ -1271,7 +1290,7 @@ func _end_turn() -> void:
 	if enemy_vulnerable > 0:
 		enemy_vulnerable -= 1
 	if selected_faction == "Vampiros" and faction_resource >= 8:
-		player_hp -= 2
+		_lose_health(2, "self_damage")
 		message_label.text += " La Sed te causa 2 de daño."
 		if faction_resource == 10:
 			player_weak += 1
@@ -1279,6 +1298,7 @@ func _end_turn() -> void:
 	enemy_pattern += 1
 	if enemy_bleed > 0:
 		_log_combat("Sangrado: el enemigo pierde %d Salud." % mini(enemy_hp, enemy_bleed))
+	combat_stats.bleed += mini(enemy_hp, enemy_bleed)
 	enemy_hp = maxi(0, enemy_hp - enemy_bleed)
 	enemy_bleed = maxi(0, enemy_bleed - 1)
 	_log_combat(message_label.text)
@@ -1373,7 +1393,17 @@ func _refresh_battle() -> void:
 	if playable_count > 0:
 		end_turn_button.tooltip_text += "\nTodavía puedes jugar %d cartas de tu mano (no necesariamente todas con el Ímpetu disponible)." % playable_count
 
+func _combat_summary_text() -> String:
+	return ("RESUMEN DEL COMBATE · %d turnos\n" % turn
+		+ "Cartas jugadas: %d · Ímpetu gastado: %d\n" % [combat_stats.cards, combat_stats.energy]
+		+ "Daño a Salud enemiga: %d · Sangrado: %d\n" % [combat_stats.damage, combat_stats.bleed]
+		+ "Salud perdida por ataques: %d · Por Sed/Descontrol: %d\n" % [combat_stats.received, combat_stats.self_damage]
+		+ "Daño absorbido por Bloqueo: %d · Evitado por Etéreo: %d\n" % [combat_stats.blocked, combat_stats.avoided]
+		+ "Curación efectiva: %d · Salud: %d → %d" % [combat_stats.healed, combat_stats.starting_hp, maxi(0, player_hp)])
+
 func _finish_battle(victory: bool) -> void:
+	if battle_over:
+		return
 	screen = "won" if victory else "lost"
 	battle_over = true
 	hand.clear()
@@ -1395,3 +1425,8 @@ func _finish_battle(victory: bool) -> void:
 			message_label.text = "VICTORIA · Has llegado a Santa Vigilia y vencido al Custodio."
 		end_turn_button.pressed.connect(show_faction_selection)
 	_log_combat(message_label.text)
+	var summary := _make_label(_combat_summary_text(), 20, Color("d7d9df"))
+	summary.name = "CombatSummary"
+	summary.tooltip_text = "Solo este combate. Daño y curación efectivos, sin exceso sobre la Salud disponible. Sangrado se muestra aparte del daño directo. Etéreo cuenta el golpe ya reducido por Débil y Posesión."
+	hand_box.add_child(summary)
+	_log_combat(_combat_summary_text())
