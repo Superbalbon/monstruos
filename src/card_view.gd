@@ -7,7 +7,13 @@ func setup(card: Dictionary, faction_color: Color, art_path: String, current_cos
 	card_data = card
 	text = ""
 	custom_minimum_size = Vector2(218, 258)
-	tooltip_text = str(card["nombre"]) + "\n" + str(card["efecto"]) + "\nMejora prevista (aún no disponible): " + str(card["mejora"])
+	tooltip_text = str(card["nombre"]) + "\n" + str(card["efecto"])
+	if card.get("upgraded", false):
+		tooltip_text += "\nMejora aplicada a esta copia. No puede mejorarse otra vez."
+	elif preload("res://src/card_upgrades.gd").can_upgrade(str(card.id)):
+		tooltip_text += "\nMejora disponible en el descanso: " + str(card["mejora"])
+	else:
+		tooltip_text += "\nMejora prevista (aún no disponible): " + str(card["mejora"])
 	if card.get("temporal", false):
 		tooltip_text += "\nTemporal: desaparece al terminar el combate; no se añade a tu mazo."
 	if current_cost >= 0 and current_cost != int(card["coste"]):

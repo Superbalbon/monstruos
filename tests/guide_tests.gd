@@ -21,7 +21,7 @@ func run() -> void:
 	var guide = game.get_node("RulesOverlay")
 	var topics = guide.find_child("GuideTopics", true, false)
 	var body = guide.find_child("GuideBody", true, false)
-	check(topics.item_count == 8, "Ocho temas disponibles")
+	check(topics.item_count == 9, "Nueve temas disponibles")
 	for index in topics.item_count:
 		topics.select(index)
 		topics.item_selected.emit(index)

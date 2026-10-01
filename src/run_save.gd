@@ -1,5 +1,7 @@
 extends RefCounted
 
+const CardUpgrades = preload("res://src/card_upgrades.gd")
+
 var path := "user://expedicion.json"
 var last_error := ""
 
@@ -39,7 +41,7 @@ func read(cards: Dictionary, starters: Dictionary, rewards: Dictionary) -> Dicti
 func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dictionary) -> bool:
 	if not value is Dictionary:
 		return false
-	if value.get("version") != 1 or value.get("state") not in ["route", "reward", "finished"]:
+	if (value.get("version") != 1 and value.get("version") != 2) or value.get("state") not in ["route", "reward", "finished"]:
 		return false
 	var faction: Variant = value.get("faction")
 	if not faction is String or not starters.has(faction):
@@ -59,8 +61,17 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 	# Only the final rest can remove a card; earlier checkpoints need ten.
 	if value.deck.size() == 9 and int(value.stage) != 4:
 		return false
-	for id in value.deck:
-		if not id is String or not cards.has(id):
+	var upgrades := 0
+	for deck_id in value.deck:
+		if not deck_id is String:
+			return false
+		var id: String = deck_id
+		if id.ends_with("+"):
+			id = id.trim_suffix("+")
+			upgrades += 1
+			if value.version != 2 or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
+				return false
+		if not cards.has(id):
 			return false
 		if id not in starters[faction] and id not in rewards[faction]:
 			return false

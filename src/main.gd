@@ -3,6 +3,7 @@ extends Control
 const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
 const CardViewScene = preload("res://src/card_view.gd")
 const RouteEvents = preload("res://src/route_events.gd")
+const CardUpgrades = preload("res://src/card_upgrades.gd")
 var save_store = preload("res://src/run_save.gd").new()
 var persistence_enabled := true
 var save_failed := false
@@ -222,7 +223,8 @@ func show_title_screen() -> void:
 func _checkpoint(state: String) -> void:
 	if not persistence_enabled:
 		return
-	save_failed = not save_store.write({"version": 1, "state": state, "faction": selected_faction,
+	var version := 2 if run_deck.any(func(id: String): return id.ends_with("+")) else 1
+	save_failed = not save_store.write({"version": version, "state": state, "faction": selected_faction,
 		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck})
 	if save_failed:
 		var warning := _make_label("No se pudo guardar. " + save_store.last_error, 16, Color("ee6b7a"))
@@ -244,20 +246,25 @@ func _resume_run() -> void:
 	else:
 		show_route()
 
-func _show_deck(pile_name := "", remove_at_camp := false) -> void:
+func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := false) -> void:
 	if has_node("RulesOverlay") or has_node("DeckOverlay") or choosing_card:
 		return
 	if remove_at_camp and (screen != "route" or stage != 3 or run_deck.size() <= 9):
+		return
+	if upgrade_at_camp and (screen != "route" or stage != 3 or remove_at_camp or not pile_name.is_empty()):
 		return
 	var display_cards: Array[Dictionary] = []
 	var heading := "TU MAZO"
 	var description := "Composición de la expedición; incluye todas las copias."
 	if pile_name.is_empty():
 		for id in run_deck:
-			display_cards.append(cards_by_id[id])
+			display_cards.append(CardUpgrades.resolve(cards_by_id, id))
 		if remove_at_camp:
 			heading = "RETIRAR UNA CARTA"
 			description = "Selecciona una copia para retirarla de esta expedición. Avanzarás al jefe SIN recuperar Salud."
+		elif upgrade_at_camp:
+			heading = "MEJORAR UNA CARTA"
+			description = "Selecciona una copia: se muestra su versión mejorada (+). Avanzarás SIN curarte. Solo ataques y defensas básicos disponibles."
 	else:
 		if screen not in ["battle", "won", "lost"]:
 			return
@@ -284,6 +291,7 @@ func _show_deck(pile_name := "", remove_at_camp := false) -> void:
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
 	overlay.set_meta("camp_removal", remove_at_camp)
+	overlay.set_meta("camp_upgrade", upgrade_at_camp)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var box := VBoxContainer.new()
@@ -305,20 +313,40 @@ func _show_deck(pile_name := "", remove_at_camp := false) -> void:
 	scroll.add_child(grid)
 	for index in display_cards.size():
 		var card: Dictionary = display_cards[index]
+		var eligible: bool = upgrade_at_camp and CardUpgrades.can_upgrade(run_deck[index])
+		var original_effect: String = str(card.efecto)
+		if eligible:
+			card = CardUpgrades.resolve(cards_by_id, run_deck[index] + "+")
 		var view := CardViewScene.new()
 		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
 		view.focus_mode = Control.FOCUS_NONE
 		if remove_at_camp:
 			view.focus_mode = Control.FOCUS_ALL
 			view.pressed.connect(_remove_card_at_camp.bind(index))
+		elif upgrade_at_camp:
+			view.disabled = not eligible
+			view.focus_mode = Control.FOCUS_ALL
+			view.tooltip_text = ("ACTUAL: " + original_effect + "\nDESPUÉS: " + str(card.efecto) + "\nMejorar esta copia sustituye la curación del descanso.") if eligible else "Esta carta ya está mejorada o su mejora todavía no está implementada."
+			view.pressed.connect(_upgrade_card_at_camp.bind(index))
 		grid.add_child(view)
 	var close := _make_button("CERRAR MAZO" if pile_name.is_empty() else "VOLVER AL COMBATE")
-	if remove_at_camp:
+	if remove_at_camp or upgrade_at_camp:
 		close.text = "CANCELAR · VOLVER AL DESCANSO"
 	close.custom_minimum_size.y = 48
 	close.pressed.connect(overlay.queue_free)
 	box.add_child(close)
 	close.grab_focus()
+
+func _upgrade_card_at_camp(index: int) -> void:
+	if screen != "route" or stage != 3 or index < 0 or index >= run_deck.size():
+		return
+	if not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("camp_upgrade", false):
+		return
+	if not CardUpgrades.can_upgrade(run_deck[index]):
+		return
+	run_deck[index] += "+"
+	stage = 4
+	show_route()
 
 func _remove_card_at_camp(index: int) -> void:
 	if screen != "route" or stage != 3 or run_deck.size() <= 9 or index < 0 or index >= run_deck.size():
@@ -424,7 +452,7 @@ func _fill_catalog(grid: GridContainer, count: Label, faction: String) -> void:
 		if id not in ids:
 			ids.append(id)
 	ids.sort()
-	count.text = "%s · %d cartas distintas · mejoras todavía no disponibles" % [faction, ids.size()]
+	count.text = "%s · %d cartas base · consulta en su ayuda qué mejoras están disponibles" % [faction, ids.size()]
 	for id in ids:
 		var entry := VBoxContainer.new()
 		grid.add_child(entry)
@@ -587,11 +615,18 @@ func show_route() -> void:
 		event_button.pressed.connect(_show_hermitage)
 		alternatives.add_child(event_button)
 	if stage == 3:
-		var refine := _make_button("Alternativa: retirar una carta del mazo SIN recuperar Salud")
+		var camp_choices := HBoxContainer.new()
+		box.add_child(camp_choices)
+		var refine := _make_button("Retirar una carta SIN curarte")
 		refine.name = "RefineDeckButton"
 		refine.disabled = run_deck.size() <= 9
 		refine.pressed.connect(_show_deck.bind("", true))
-		box.add_child(refine)
+		camp_choices.add_child(refine)
+		var upgrade := _make_button("Mejorar una carta SIN curarte")
+		upgrade.name = "UpgradeCardButton"
+		upgrade.disabled = not run_deck.any(func(id: String): return CardUpgrades.can_upgrade(id))
+		upgrade.pressed.connect(_show_deck.bind("", false, true))
+		camp_choices.add_child(upgrade)
 	var deck_button := _make_button("VER MAZO")
 	deck_button.pressed.connect(_show_deck)
 	var collection_buttons := HBoxContainer.new()
@@ -728,7 +763,7 @@ func start_battle(faction: String) -> void:
 	exhaust_pile.clear()
 	hand.clear()
 	for card_id in run_deck:
-		draw_pile.append(cards_by_id[card_id].duplicate(true))
+		draw_pile.append(CardUpgrades.resolve(cards_by_id, card_id))
 	draw_pile.shuffle()
 	player_block = 0
 	energy = MAX_ENERGY
@@ -1065,7 +1100,7 @@ func _play_card(card: Dictionary) -> void:
 			player_block += 4
 			consecrated += 1
 			action_message += "4 de Bloqueo y Consagración."
-		"H003": action_message += _gain_block(5)
+		"H003": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"L002":
 			_gain_fury(2)
 			enemy_weak += 1
@@ -1074,11 +1109,11 @@ func _play_card(card: Dictionary) -> void:
 			enemy_marked = true
 			_draw_cards(1)
 			action_message += "el enemigo queda Marcado. Robas 1 carta."
-		"L029": action_message += _gain_block(5)
+		"L029": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"V004":
 			action_message += "examina las próximas cartas."
 			_start_scout()
-		"V007": action_message += _gain_block(5)
+		"V007": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"V014":
 			faction_resource = maxi(0, faction_resource - 2)
 			_draw_cards(1)
@@ -1087,7 +1122,7 @@ func _play_card(card: Dictionary) -> void:
 			faction_resource = mini(8, faction_resource + 1)
 			_draw_cards(1)
 			action_message += "1 de Ectoplasma y robas 1 carta."
-		"F003": action_message += _gain_block(5)
+		"F003": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"F015":
 			faction_resource -= 2
 			action_message += _resolve_attack_card(last_attack_card, 0.5) + " mediante Eco."
@@ -1136,6 +1171,7 @@ func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
 	var id: String = card.id
 	var damage: int = {"H001": 6, "H007": 7, "L001": 6, "L004": 5, "L005": 4, "L006": 4, "L008": 8, "V001": 6, "V005": 10, "V006": 8, "F004": 4, "F005": 7, "F009": 6}.get(id, int(card.get("damage", 0)))
 	var hits: int = 3 if id == "L005" else int(card.get("hits", 1))
+	damage = int(card.get("attack_damage", damage))
 	if id == "L008" and not allies.is_empty():
 		damage -= 4
 	if id == "H007":

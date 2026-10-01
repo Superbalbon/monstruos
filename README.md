@@ -25,7 +25,7 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 
 ## Estado
 
-El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Las mejoras de cartas y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
+El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Ocho ataques y defensas básicos pueden mejorarse en el descanso. Las demás mejoras y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
 
 ## Ejecutar el prototipo
 
@@ -43,7 +43,7 @@ No requiere complementos ni recursos externos.
   la guía sin modificar la partida. Las reglas describen el prototipo actual,
   incluidas las mecánicas aún sin uso como Marcado.
 - Selecciona una carta para jugarla.
-- Pasa el cursor sobre una carta para leer su efecto completo y su mejora prevista (todavía no disponible).
+- Pasa el cursor sobre una carta para leer su efecto completo. La ayuda distingue las mejoras disponibles de las que siguen pendientes.
 - Si una carta de la mano está desactivada, su ayuda explica todas las condiciones
   pendientes: Ímpetu, Ectoplasma, ataque previo, intención o estado incompatible.
   Los costes mostrados incluyen los descuentos de Manada y Alfa.
@@ -71,8 +71,8 @@ por facción (accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
-En el descanso anterior al Custodio puedes elegir entre recuperar 15 Salud o
-**retirar una carta sin curarte**. La alternativa abre tu mazo: selecciona la
+En el descanso anterior al Custodio puedes elegir entre recuperar 15 Salud,
+mejorar una carta o **retirar una carta sin curarte**. Para retirar, selecciona la
 copia que quieras retirar de esta expedición, o cancela con Esc. Retirar avanza
 al monasterio y se guarda automáticamente; no puedes retirar y curarte en el
 mismo descanso. El mazo puede quedar en 9 cartas. Los guardados anteriores
@@ -83,7 +83,7 @@ Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
 Ectoplasma Frío y Cadena Etérea. Las 40 cartas base y los aliados persistentes
-ya están implementados; las mejoras siguen siendo propuestas de diseño.
+ya están implementados; las mejoras no incluidas en la sección siguiente siguen siendo propuestas de diseño.
 Descontrol y las penalizaciones de Sed
 ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
@@ -142,6 +142,30 @@ roba 1 carta. Combina con Colmillo Noble e Hipnosis Mental. Con Sed 10 no se
 activa ni consume la oportunidad; reducir Sed y volver a aumentarla sí puede
 activarlo. Si no quedan cartas para robar, la activación se consume igualmente.
 No roba al jugarse ni por aumentos anteriores; no admite dos copias activas.
+
+## Mejorar cartas en el descanso
+
+Antes del Custodio puedes **curarte**, **retirar una carta** o **mejorar una carta**.
+Son alternativas excluyentes: mejorar avanza al monasterio sin recuperar Salud.
+La selección muestra el resultado y su ayuda compara el efecto actual con el
+mejorado. Elige una copia concreta; Esc cancela sin consumir el descanso.
+
+Mejoras implementadas:
+
+| Facción | Ataque | Defensa |
+|---|---|---|
+| Humanos | Balas de Plata: 6 → 8 daño, conserva el +3 contra Vulnerable | Aldeano Valiente: 5 → 8 Bloqueo |
+| Hombres Lobo | Garra Salvaje: 6 → 9 daño | Piel Gruesa: 5 → 8 Bloqueo |
+| Vampiros | Mordisco Vampírico: 6 → 9 daño | Velo de Sombras: 5 → 8 Bloqueo |
+| Fantasmas | Toque Gélido: 6 → 9 daño | Velo Fantasmal: 5 → 8 Bloqueo |
+
+El nombre lleva **+** y la mejora se conserva al robar, descartar y cargar la
+expedición. Eco repite también el daño mejorado. Se reutiliza la ilustración base;
+no necesitas producir otra imagen. Las otras copias del mazo no cambian.
+
+Los guardados anteriores siguen cargándose. Una expedición con una mejora usa
+el formato 2: no la abras con una versión antigua del juego. El prototipo solo
+permite una mejora por expedición, en el descanso final, y nunca dos sobre la misma copia.
 
 ## Catálogo base completo
 
@@ -298,3 +322,6 @@ Pruebas del resumen, daño efectivo, Bloqueo, Etéreo, curación, costes y reini
 
 Pruebas del encuentro narrativo, cuatro facciones, costes, cancelación y guardado:
 `godot --headless --path . --script res://tests/event_tests.gd`.
+
+Pruebas de las ocho mejoras, copia individual, cancelación, efectos, Eco y guardado:
+`godot --headless --path . --script res://tests/upgrade_tests.gd`.
