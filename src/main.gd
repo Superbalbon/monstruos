@@ -248,9 +248,13 @@ func _resume_run() -> void:
 	else:
 		show_route()
 
-func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := false) -> void:
-	if has_node("RulesOverlay") or has_node("DeckOverlay") or choosing_card:
+func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := false, starter_faction := "") -> void:
+	if has_node("RulesOverlay") or has_node("DeckOverlay") or has_node("NewRunConfirmation") or choosing_card:
 		return
+	var preview := not starter_faction.is_empty()
+	if preview and (screen != "faction" or not STARTER_DECKS.has(starter_faction) or not pile_name.is_empty() or remove_at_camp or upgrade_at_camp):
+		return
+	var display_faction: String = starter_faction if preview else selected_faction
 	if remove_at_camp and (screen != "route" or stage != 3 or run_deck.size() <= 9):
 		return
 	if upgrade_at_camp and (screen != "route" or stage != 3 or remove_at_camp or not pile_name.is_empty()):
@@ -259,9 +263,19 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 	var heading := "TU MAZO"
 	var description := "Composición de la expedición; incluye todas las copias."
 	if pile_name.is_empty():
-		for id in run_deck:
+		var deck: Array = STARTER_DECKS[starter_faction] if preview else run_deck
+		for id in deck:
 			display_cards.append(CardUpgrades.resolve(cards_by_id, id))
-		if remove_at_camp:
+		if preview:
+			heading = "MAZO INICIAL · " + starter_faction.to_upper()
+			var advice := {
+				"Humanos": "Combina Bloqueo con Consagración para reforzar tus ataques.",
+				"Hombres Lobo": "Acumula Furia y prepara tus golpes. Al llegar a 10, Descontrol cuesta Salud.",
+				"Vampiros": "Recupera Salud atacando y controla la Sed: a partir de 8 tiene penalizaciones.",
+				"Fantasmas": "Genera Ectoplasma antes de repetir un ataque con Eco del Pasado."
+			}
+			description = advice[starter_faction] + "\nSolo consulta: no inicia ni sustituye una expedición."
+		elif remove_at_camp:
 			heading = "RETIRAR UNA CARTA"
 			description = "Selecciona una copia para retirarla de esta expedición. Avanzarás al jefe SIN recuperar Salud."
 		elif upgrade_at_camp:
@@ -325,7 +339,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 		if eligible:
 			card = CardUpgrades.resolve(cards_by_id, run_deck[index] + "+")
 		var view := CardViewScene.new()
-		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
+		view.setup(card, FACTION_COLORS[display_faction], _card_art_path(card))
 		view.focus_mode = Control.FOCUS_NONE
 		if remove_at_camp:
 			view.focus_mode = Control.FOCUS_ALL
@@ -337,6 +351,8 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 			view.pressed.connect(_upgrade_card_at_camp.bind(index))
 		grid.add_child(view)
 	var close := _make_button("CERRAR MAZO" if pile_name.is_empty() else "VOLVER AL COMBATE")
+	if preview:
+		close.text = "VOLVER A LAS ESTIRPES"
 	if remove_at_camp or upgrade_at_camp:
 		close.text = "CANCELAR · VOLVER AL DESCANSO"
 	close.custom_minimum_size.y = 48
@@ -612,6 +628,10 @@ func show_faction_selection() -> void:
 		var role := _make_label(FACTION_SUBTITLES[faction], 17, Color("c8ccd5"))
 		role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		box.add_child(role)
+		var preview := _make_button("VER MAZO INICIAL", 16)
+		preview.name = "StarterPreview_" + str(STARTER_DECKS.keys().find(faction))
+		preview.pressed.connect(_show_deck.bind("", false, false, faction))
+		box.add_child(preview)
 		var choose := _make_button("JUGAR", 18)
 		choose.custom_minimum_size = Vector2(0, 48)
 		choose.pressed.connect(_request_start_run.bind(faction))
@@ -622,7 +642,7 @@ func show_faction_selection() -> void:
 	root.add_child(back)
 
 func _request_start_run(faction: String) -> void:
-	if screen != "faction" or not STARTER_DECKS.has(faction) or has_node("NewRunConfirmation"):
+	if screen != "faction" or not STARTER_DECKS.has(faction) or has_node("NewRunConfirmation") or has_node("DeckOverlay"):
 		return
 	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS) if persistence_enabled else {}
 	var existing := persistence_enabled and FileAccess.file_exists(save_store.path)

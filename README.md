@@ -43,6 +43,11 @@ No requiere complementos ni recursos externos.
   la guía sin modificar la partida. Las reglas describen el prototipo actual,
   incluidas las mecánicas aún sin uso como Marcado.
 - Selecciona una carta para jugarla.
+- En la selección de estirpe, **Ver mazo inicial** muestra sus diez cartas,
+  incluidas las copias repetidas, un consejo de juego y el resumen de costes.
+  No inicia una expedición ni modifica la partida guardada. **Esc** o
+  **Volver a las estirpes** cierra la consulta; **Jugar** sigue siendo la acción
+  que inicia la partida (con confirmación si hay un guardado pendiente).
 - Pasa el cursor sobre una carta para leer su efecto completo. La ayuda distingue las mejoras disponibles de las que siguen pendientes.
 - Si una carta de la mano está desactivada, su ayuda explica todas las condiciones
   pendientes: Ímpetu, Ectoplasma, ataque previo, intención o estado incompatible.
@@ -353,6 +358,9 @@ Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
 
 Pruebas del resumen de composición y costes del mazo:
 `godot --headless --path . --script res://tests/deck_summary_tests.gd`.
+
+Pruebas de consulta de los cuatro mazos iniciales sin modificar la expedición:
+`godot --headless --path . --script res://tests/starter_preview_tests.gd`.
 
 Pruebas de consulta del mazo y copias disponibles en recompensas:
 `godot --headless --path . --script res://tests/reward_consultation_tests.gd`.
