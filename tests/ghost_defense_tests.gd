@@ -78,7 +78,7 @@ func run() -> void:
 	await process_frame
 	var row = scroll.get_child(0)
 	check(scroll.get_global_rect().encloses(row.get_child(5).get_global_rect()), "Última recompensa accesible al desplazar")
-	row.get_child(5).pressed.emit()
+	game.find_child("RewardCard_F008", true, false).pressed.emit()
 	check("F008" in game.run_deck, "Paso seleccionable como recompensa")
 	var saved := {"version": 1, "state": "route", "faction": "Fantasmas", "stage": 2, "hp": 50, "deck": game.run_deck.duplicate()}
 	check(game.save_store.valid(saved, game.cards_by_id, game.STARTER_DECKS, game.REWARDS), "Guardado admite nueva recompensa")

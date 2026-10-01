@@ -71,6 +71,12 @@ por facción (accesibles con la barra horizontal)
 o continuar sin ampliar el mazo. El refugio recupera 12 de Salud y el descanso
 15, sin superar 50. El guardado automático permite continuar desde el menú.
 
+En recompensas, **Ver mazo · Consultar antes de elegir** abre tu mazo y su
+resumen de costes sin aceptar ninguna carta. Ciérralo con Esc para seguir
+eligiendo. Bajo cada recompensa se muestra cuántas copias tienes, incluyendo
+las mejoradas, y cuántas de ellas están mejoradas. Elegir añade una copia base;
+consultar no cambia el guardado ni la recompensa pendiente.
+
 En el descanso anterior al Custodio puedes elegir entre recuperar 15 Salud,
 mejorar una carta o **retirar una carta sin curarte**. Para retirar, selecciona la
 copia que quieras retirar de esta expedición, o cancela con Esc. Retirar avanza
@@ -340,6 +346,9 @@ Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
 
 Pruebas del resumen de composición y costes del mazo:
 `godot --headless --path . --script res://tests/deck_summary_tests.gd`.
+
+Pruebas de consulta del mazo y copias disponibles en recompensas:
+`godot --headless --path . --script res://tests/reward_consultation_tests.gd`.
 
 Pruebas del historial, consulta sin cambios y límite de eventos:
 `godot --headless --path . --script res://tests/history_tests.gd`.

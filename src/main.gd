@@ -763,10 +763,14 @@ func show_rewards() -> void:
 	screen = "reward"
 	var box := _journey_panel("ELIGE UNA RECOMPENSA", "Añade una carta a tu mazo para los siguientes encuentros.")
 	box.custom_minimum_size.x = 960
+	var deck_button := _make_button("VER MAZO · CONSULTAR ANTES DE ELEGIR")
+	deck_button.name = "RewardDeckButton"
+	deck_button.pressed.connect(_show_deck)
+	box.add_child(deck_button)
 	if REWARDS[selected_faction].size() > 4:
 		box.add_child(_make_label("Desplaza la barra horizontal para ver todas las recompensas.", 16))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.y = 280
+	scroll.custom_minimum_size.y = 310
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
 	var row := HBoxContainer.new()
@@ -774,10 +778,19 @@ func show_rewards() -> void:
 	scroll.add_child(row)
 	for id in REWARDS[selected_faction]:
 		var card: Dictionary = cards_by_id[id]
+		var entry := VBoxContainer.new()
+		row.add_child(entry)
 		var view := CardViewScene.new()
+		view.name = "RewardCard_" + str(id)
 		view.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
 		view.pressed.connect(_take_reward.bind(str(id)))
-		row.add_child(view)
+		entry.add_child(view)
+		var owned := _reward_owned_copies(str(id))
+		var ownership := _make_label("En tu mazo: %d · Mejoradas: %d" % [owned.total, owned.upgraded], 14)
+		ownership.name = "RewardOwned_" + str(id)
+		ownership.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ownership.tooltip_text = "El total incluye las copias base y mejoradas. La recompensa añade una copia base."
+		entry.add_child(ownership)
 	var skip := _make_button("Continuar sin añadir carta")
 	skip.pressed.connect(_take_reward.bind(""))
 	box.add_child(skip)
@@ -787,8 +800,17 @@ func show_rewards() -> void:
 	box.add_child(menu)
 	_add_save_status(box)
 
+func _reward_owned_copies(id: String) -> Dictionary:
+	var owned := {"total": 0, "upgraded": 0}
+	for deck_id in run_deck:
+		if deck_id.trim_suffix("+") == id:
+			owned.total += 1
+			if deck_id.ends_with("+"):
+				owned.upgraded += 1
+	return owned
+
 func _take_reward(id: String) -> void:
-	if screen != "reward":
+	if screen != "reward" or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
 		return
 	if not id.is_empty():
 		if id not in REWARDS[selected_faction]:
