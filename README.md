@@ -294,6 +294,11 @@ esto no constituye una prueba de equilibrio de dificultad.
 - `Continuar` restaura facción, Salud, etapa y mazo. Elegir estirpe para una nueva
   expedición sustituye la anterior, tal como indica el menú.
 - `Ver mazo` muestra todas las copias de la expedición desde la ruta y el combate.
+  Incluye un resumen por tipo, número de copias mejoradas, distribución de costes
+  (0, 1, 2 y 3 o más) y coste medio. Cuenta los costes impresos de las versiones
+  actuales, sin descuentos temporales de combate. También aparece al mejorar o
+  retirar en el descanso: describe el mazo actual, no las mejoras previsualizadas.
+  No cambia el orden de robo ni aparece en los visores de pilas individuales.
 - En combate, pulsa **Robo**, **Descarte**, **Agotadas**, **Poderes** o **Aliados** para consultar
   las cartas de esa pila, incluidas las copias repetidas. Robo se ordena por nombre
   y no revela el orden real ni altera el barajado. Poderes muestra los poderes
@@ -332,6 +337,9 @@ Pruebas de patrones, intenciones y ataques múltiples:
 
 Pruebas de consulta de pilas sin alterar el combate ni el orden de robo:
 `godot --headless --path . --script res://tests/pile_tests.gd`.
+
+Pruebas del resumen de composición y costes del mazo:
+`godot --headless --path . --script res://tests/deck_summary_tests.gd`.
 
 Pruebas del historial, consulta sin cambios y límite de eventos:
 `godot --headless --path . --script res://tests/history_tests.gd`.

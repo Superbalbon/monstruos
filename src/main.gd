@@ -303,6 +303,11 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 	var explanation := _make_label(description, 18)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(explanation)
+	if pile_name.is_empty():
+		var summary := _make_label(preload("res://src/deck_summary.gd").describe(display_cards), 16)
+		summary.name = "DeckSummary"
+		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(summary)
 	if display_cards.is_empty():
 		box.add_child(_make_label("No hay cartas en esta pila.", 20))
 	var scroll := ScrollContainer.new()
