@@ -99,6 +99,14 @@ Descontrol y las penalizaciones de Sed
 ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
 
+Tras vencer al Custodio aparece **Leer desenlace**, junto al resumen del combate.
+Cada protagonista tiene un epílogo propio para cerrar esta ruta del prototipo.
+**Volver al resultado** o **Esc** permite consultar de nuevo el resumen y el
+historial. Puedes releerlo mientras permanezcas en el resultado final; no se
+guarda una galería de finales ni se conceden desbloqueos permanentes. Los
+finales de la campaña completa descritos en el documento de mundo siguen siendo
+diseño futuro.
+
 Cada facción dispone también de una cuarta recompensa:
 
 - **Barricada:** cuesta 3 y conserva el Bloqueo restante entre turnos. Es un poder
@@ -361,6 +369,9 @@ Pruebas del resumen de composición y costes del mazo:
 
 Pruebas de consulta de los cuatro mazos iniciales sin modificar la expedición:
 `godot --headless --path . --script res://tests/starter_preview_tests.gd`.
+
+Pruebas de los cuatro epílogos, acceso tras victoria final y consulta sin cambios:
+`godot --headless --path . --script res://tests/epilogue_tests.gd`.
 
 Pruebas de consulta del mazo y copias disponibles en recompensas:
 `godot --headless --path . --script res://tests/reward_consultation_tests.gd`.

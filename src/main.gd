@@ -1625,6 +1625,40 @@ func _refresh_battle() -> void:
 	if playable_count > 0:
 		end_turn_button.tooltip_text += "\nTodavía puedes jugar %d cartas de tu mano (no necesariamente todas con el Ímpetu disponible)." % playable_count
 
+func _show_epilogue() -> void:
+	if screen != "won" or stage != 4 or not battle_over or has_node("DeckOverlay") or has_node("RulesOverlay"):
+		return
+	var ending: Dictionary = preload("res://src/epilogues.gd").ENDINGS[selected_faction]
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 36)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 18)
+	margin.add_child(box)
+	box.add_child(_make_label("DESENLACE · " + selected_faction.to_upper(), 28, FACTION_COLORS[selected_faction]))
+	box.add_child(_make_label(ending.title, 32, Color("d8bd79")))
+	var story := RichTextLabel.new()
+	story.name = "EpilogueStory"
+	story.text = ending.text
+	story.bbcode_enabled = false
+	story.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	story.add_theme_font_size_override("normal_font_size", 23)
+	box.add_child(story)
+	var notice := _make_label("Fin de la ruta del prototipo. La historia de Valdegrís continúa; este epílogo no desbloquea cartas ni mejoras permanentes.", 16)
+	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(notice)
+	var back := _make_button("VOLVER AL RESULTADO")
+	back.name = "CloseEpilogue"
+	back.custom_minimum_size.y = 48
+	back.pressed.connect(overlay.queue_free)
+	box.add_child(back)
+	back.grab_focus()
+
 func _combat_summary_text() -> String:
 	return ("RESUMEN DEL COMBATE · %d turnos\n" % turn
 		+ "Cartas jugadas: %d · Ímpetu gastado: %d\n" % [combat_stats.cards, combat_stats.energy]
@@ -1661,4 +1695,11 @@ func _finish_battle(victory: bool) -> void:
 	summary.name = "CombatSummary"
 	summary.tooltip_text = "Solo este combate. Daño y curación efectivos, sin exceso sobre la Salud disponible. Sangrado se muestra aparte del daño directo. Etéreo cuenta el golpe ya reducido por Débil y Posesión."
 	hand_box.add_child(summary)
+	if victory and stage == 4:
+		var ending := _make_button("LEER DESENLACE", 18)
+		ending.name = "EpilogueButton"
+		ending.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		ending.custom_minimum_size.y = 48
+		ending.pressed.connect(_show_epilogue)
+		hand_box.add_child(ending)
 	_log_combat(_combat_summary_text())
