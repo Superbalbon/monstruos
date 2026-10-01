@@ -54,6 +54,16 @@ No requiere complementos ni recursos externos.
 
 ## Ruta del prototipo
 
+Después de la aldea, **Investigar la ermita** abre el primer encuentro narrativo,
+«La ermita de los nombres», con una perspectiva distinta para cada estirpe.
+Puedes entregar 8 Salud (necesitas al menos 9) para obtener Milicia Organizada,
+Alfa Dominante, Conversión o Lamento Nocturno según tu facción; o escuchar y
+recuperar 12 Salud sin carta. Ambas decisiones sustituyen al combate del Acechador
+y avanzan a la estación, guardando Salud y mazo. La carta se muestra antes de
+elegir. **Esc** vuelve al cruce sin decidir; cerrar el juego antes de elegir
+conserva el punto de control del cruce. No se puede repetir el evento.
+El equilibrio entre estas alternativas y combatir es todavía provisional.
+
 La selección de estirpe inicia una expedición: aldea, sendero o refugio,
 estación, descanso y jefe de Santa Vigilia. La Salud y las cartas adquiridas
 se conservan entre encuentros. Tras vencer puedes elegir una de siete cartas
@@ -285,3 +295,6 @@ Pruebas de la guía, navegación por temas, foco, cierre y conservación del com
 
 Pruebas del resumen, daño efectivo, Bloqueo, Etéreo, curación, costes y reinicio:
 `godot --headless --path . --script res://tests/summary_tests.gd`.
+
+Pruebas del encuentro narrativo, cuatro facciones, costes, cancelación y guardado:
+`godot --headless --path . --script res://tests/event_tests.gd`.

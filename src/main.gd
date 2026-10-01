@@ -2,6 +2,7 @@ extends Control
 
 const CARD_DATA_PATH := "res://data/cartas_prototipo.json"
 const CardViewScene = preload("res://src/card_view.gd")
+const RouteEvents = preload("res://src/route_events.gd")
 var save_store = preload("res://src/run_save.gd").new()
 var persistence_enabled := true
 var save_failed := false
@@ -480,6 +481,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			get_node("CatalogOverlay").queue_free()
 		elif has_node("DeckOverlay"):
 			get_node("DeckOverlay").queue_free()
+		elif screen == "event":
+			show_route()
 		elif screen in ["battle", "route", "reward"]:
 			_request_menu()
 		get_viewport().set_input_as_handled()
@@ -563,7 +566,7 @@ func _journey_panel(title: String, description: String) -> VBoxContainer:
 
 func show_route() -> void:
 	screen = "route"
-	var box := _journey_panel("EL CAMINO A SANTA VIGILIA", "Aldea → Sendero o refugio → Estación → Descanso → Monasterio")
+	var box := _journey_panel("EL CAMINO A SANTA VIGILIA", "Aldea → Sendero, refugio o ermita → Estación → Descanso → Monasterio")
 	var labels := ["Aldea: enfrentarse al Desvelado", "Sendero: combatir al Acechador", "Estación: combatir al Guardagujas", "Descansar junto al fuego (+15 Salud)", "Monasterio: enfrentarse al Custodio"]
 	for index in labels.size():
 		var button := _make_button(("✓ " if index < stage else "") + str(labels[index]))
@@ -572,9 +575,17 @@ func show_route() -> void:
 		button.pressed.connect(_enter_stage)
 		box.add_child(button)
 	if stage == 1:
-		var rest := _make_button("Tomar el refugio: recuperar 12 Salud y renunciar al combate y su recompensa")
+		var alternatives := HBoxContainer.new()
+		box.add_child(alternatives)
+		var rest := _make_button("Refugio: +12 Salud, sin combate ni carta")
+		rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rest.pressed.connect(_rest.bind(12))
-		box.add_child(rest)
+		alternatives.add_child(rest)
+		var event_button := _make_button("Investigar la ermita")
+		event_button.name = "HermitageButton"
+		event_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		event_button.pressed.connect(_show_hermitage)
+		alternatives.add_child(event_button)
 	if stage == 3:
 		var refine := _make_button("Alternativa: retirar una carta del mazo SIN recuperar Salud")
 		refine.name = "RefineDeckButton"
@@ -599,6 +610,55 @@ func show_route() -> void:
 	box.add_child(menu)
 	_checkpoint("route")
 	_add_save_status(box)
+
+func _show_hermitage() -> void:
+	if screen != "route" or stage != 1:
+		return
+	screen = "event"
+	var event: Dictionary = RouteEvents.HERMITAGE[selected_faction]
+	var card: Dictionary = cards_by_id[event.card]
+	var box := _journey_panel("LA ERMITA DE LOS NOMBRES", "Una campana sin badajo suena al borde del camino.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 24)
+	box.add_child(row)
+	var story := _make_label(str(event.story) + "\n\nAyudar cuesta 8 Salud y añade la carta mostrada a tu mazo. Escuchar recupera 12 Salud sin añadir cartas. Ambas opciones sustituyen al Acechador y avanzan a la estación.", 20)
+	story.name = "EventStory"
+	story.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	story.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(story)
+	var preview := CardViewScene.new()
+	preview.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card))
+	preview.disabled = true
+	row.add_child(preview)
+	var help_button := _make_button("Ayudar: −8 Salud · obtener " + str(card.nombre))
+	help_button.name = "HelpApparitionButton"
+	help_button.disabled = player_hp <= RouteEvents.HERMITAGE_COST
+	help_button.tooltip_text = "Necesitas al menos 9 Salud: esta decisión no puede matarte."
+	help_button.pressed.connect(_resolve_hermitage.bind("help"))
+	box.add_child(help_button)
+	var listen := _make_button("Escuchar su historia: +12 Salud · sin carta")
+	listen.name = "ListenApparitionButton"
+	listen.pressed.connect(_resolve_hermitage.bind("listen"))
+	box.add_child(listen)
+	var back := _make_button("Volver al cruce sin decidir · Esc")
+	back.pressed.connect(show_route)
+	box.add_child(back)
+	back.grab_focus()
+
+func _resolve_hermitage(choice: String) -> void:
+	if screen != "event" or stage != 1:
+		return
+	if choice == "help":
+		if player_hp <= RouteEvents.HERMITAGE_COST:
+			return
+		player_hp -= RouteEvents.HERMITAGE_COST
+		run_deck.append(str(RouteEvents.HERMITAGE[selected_faction].card))
+	elif choice == "listen":
+		player_hp = mini(MAX_HP, player_hp + RouteEvents.HERMITAGE_HEAL)
+	else:
+		return
+	stage += 1
+	show_route() # Same checkpoint format: health, card and advanced stage together.
 
 func _enter_stage() -> void:
 	if screen != "route":
