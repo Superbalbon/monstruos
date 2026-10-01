@@ -201,6 +201,9 @@ func show_title_screen() -> void:
 	var catalog_button := _make_button("CATÁLOGO DE CARTAS", 21)
 	catalog_button.pressed.connect(_show_catalog)
 	content.add_child(catalog_button)
+	var guide_button := _make_button("GUÍA DE REGLAS", 21)
+	guide_button.pressed.connect(_show_rules)
+	content.add_child(guide_button)
 	var saved: Dictionary = save_store.read(cards_by_id, STARTER_DECKS, REWARDS) if persistence_enabled else {}
 	if not saved.is_empty() and saved.state != "finished":
 		start_button.text = "NUEVA EXPEDICIÓN"
@@ -240,7 +243,7 @@ func _resume_run() -> void:
 		show_route()
 
 func _show_deck(pile_name := "", remove_at_camp := false) -> void:
-	if has_node("DeckOverlay") or choosing_card:
+	if has_node("RulesOverlay") or has_node("DeckOverlay") or choosing_card:
 		return
 	if remove_at_camp and (screen != "route" or stage != 3 or run_deck.size() <= 9):
 		return
@@ -330,7 +333,7 @@ func _log_combat(entry: String) -> void:
 		combat_log.pop_front()
 
 func _show_history() -> void:
-	if screen not in ["battle", "won", "lost"] or choosing_card or has_node("DeckOverlay"):
+	if screen not in ["battle", "won", "lost"] or choosing_card or has_node("DeckOverlay") or has_node("RulesOverlay"):
 		return
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
@@ -361,7 +364,7 @@ func _show_history() -> void:
 	close.grab_focus()
 
 func _show_catalog() -> void:
-	if has_node("CatalogOverlay") or choosing_card:
+	if has_node("RulesOverlay") or has_node("CatalogOverlay") or choosing_card:
 		return
 	var overlay := PanelContainer.new()
 	overlay.name = "CatalogOverlay"
@@ -434,8 +437,13 @@ func _fill_catalog(grid: GridContainer, count: Label, faction: String) -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		entry.add_child(label)
 
+func _show_rules() -> void:
+	if choosing_card or has_node("RulesOverlay") or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
+		return
+	add_child(preload("res://src/rules_guide.gd").new())
+
 func _request_menu() -> void:
-	if choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
+	if has_node("RulesOverlay") or choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
 		return
 	if screen in ["route", "reward"]:
 		_checkpoint(screen)
@@ -465,7 +473,9 @@ func _request_menu() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not event.is_echo():
-		if has_node("CatalogOverlay"):
+		if has_node("RulesOverlay"):
+			get_node("RulesOverlay").close()
+		elif has_node("CatalogOverlay"):
 			get_node("CatalogOverlay").queue_free()
 		elif has_node("DeckOverlay"):
 			get_node("DeckOverlay").queue_free()
@@ -580,6 +590,9 @@ func show_route() -> void:
 	catalog_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	catalog_button.pressed.connect(_show_catalog)
 	collection_buttons.add_child(catalog_button)
+	var guide := _make_button("GUÍA DE REGLAS")
+	guide.pressed.connect(_show_rules)
+	collection_buttons.add_child(guide)
 	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
 	menu.pressed.connect(_request_menu)
 	box.add_child(menu)
@@ -710,6 +723,9 @@ func _build_battle_screen() -> void:
 	var deck_button := _make_button("VER MAZO", 16)
 	deck_button.pressed.connect(_show_deck)
 	header.add_child(deck_button)
+	var guide_button := _make_button("REGLAS", 16)
+	guide_button.pressed.connect(_show_rules)
+	header.add_child(guide_button)
 	var menu_button := _make_button("SALIR AL MENÚ", 16)
 	menu_button.tooltip_text = "Al continuar se reiniciará este combate desde el último guardado."
 	menu_button.pressed.connect(_request_menu)

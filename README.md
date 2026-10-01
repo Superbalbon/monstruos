@@ -37,6 +37,11 @@ No requiere complementos ni recursos externos.
 
 ## Controles
 
+- **Guía de reglas**, en el menú y la ruta, o **Reglas**, durante el combate,
+  explica turnos, estados, las cuatro facciones y guardado. Elige un tema en
+  el desplegable y desplaza el texto si es necesario. **Volver** o **Esc** cierra
+  la guía sin modificar la partida. Las reglas describen el prototipo actual,
+  incluidas las mecánicas aún sin uso como Marcado.
 - Selecciona una carta para jugarla.
 - Pasa el cursor sobre una carta para leer su efecto completo y su mejora prevista (todavía no disponible).
 - Si una carta de la mano está desactivada, su ayuda explica todas las condiciones
@@ -269,3 +274,6 @@ Conversión, Etéreo enemigo, Lamento y efectos secundarios de Eco:
 
 Pruebas de motivos de bloqueo, costes dinámicos, ayudas y aviso de fin de turno:
 `godot --headless --path . --script res://tests/playability_tests.gd`.
+
+Pruebas de la guía, navegación por temas, foco, cierre y conservación del combate:
+`godot --headless --path . --script res://tests/guide_tests.gd`.
