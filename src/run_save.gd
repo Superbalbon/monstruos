@@ -45,12 +45,12 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 	var version: Variant = value.get("version")
 	if not (version is int or version is float) or not is_finite(float(version)) or float(version) != floor(float(version)):
 		return false
-	if int(version) not in [1, 2, 3] or value.get("state") not in ["route", "reward", "finished"]:
+	if int(version) not in [1, 2, 3, 4] or value.get("state") not in ["route", "reward", "finished"]:
 		return false
 	var faction: Variant = value.get("faction")
 	if not faction is String or not starters.has(faction):
 		return false
-	if value.version == 3:
+	if value.version >= 3:
 		var coins: Variant = value.get("coins")
 		if not (coins is int or coins is float) or not is_finite(float(coins)) or float(coins) != floor(float(coins)) or coins < 0 or coins > 10000:
 			return false
@@ -70,6 +70,11 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 			return false
 	if value.stage < 0 or value.stage > 4 or value.hp < 0 or value.hp > 50:
 		return false
+	if value.version == 4:
+		if not value.get("elite") is bool:
+			return false
+		if value.elite and int(value.stage) != 2:
+			return false
 	if value.state != "finished" and value.hp == 0:
 		return false
 	if value.state == "reward" and int(value.stage) not in [0, 1, 2]:
@@ -87,7 +92,7 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 		if id.ends_with("+"):
 			id = id.trim_suffix("+")
 			upgrades += 1
-			if int(value.version) not in [2, 3] or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
+			if int(value.version) not in [2, 3, 4] or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
 				return false
 		if not cards.has(id):
 			return false

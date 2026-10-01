@@ -94,6 +94,21 @@ son provisionales; ningún enemigo exige comprar una reliquia para acceder.
 
 ### Encuentros y decisiones
 
+En la estación puedes elegir el **desafío opcional del Revisor de Ceniza** en
+lugar del Guardagujas. Tiene 56 Salud y repite: ataque de 6 × 2, defensa de 8
+Bloqueo y 1 Débil para el jugador, ataque de 16. Vencer concede **45 monedas**
+en vez de las 25 del encuentro normal, con la misma elección de una carta.
+No se combaten ambos rivales ni se exige tener reliquias.
+
+El botón del desafío abre primero su ficha. **Volver** o **Esc** cancela sin
+coste; **Aceptar desafío e iniciar combate** guarda la elección y comienza la
+lucha. Ya no podrás cambiar al Guardagujas en esa expedición. Al continuar tras
+salir del combate se recupera el punto previo, con el mismo rival y la Salud
+previa. Si no se puede guardar, no comienza el combate. La elección activa usa
+el formato de guardado 4, compatible con moneda y reliquias; las versiones 1–3
+siguen cargándose como rutas normales. Tras elegir la recompensa, continúa el
+descanso habitual. Dificultad y botín provisionales.
+
 **Ver rival**, junto al combate disponible, permite consultar su Salud y la
 secuencia de acciones base antes de entrar. La secuencia se repite; el daño
 indicado es por golpe, antes de estados y Bloqueo. Durante la lucha, la intención
@@ -424,6 +439,9 @@ Pruebas de información previa de rivales y conservación de la ruta:
 
 Pruebas de moneda, doce reliquias, efectos pasivos, compras y migración de guardados:
 `godot --headless --path . --script res://tests/economy_tests.gd`.
+
+Pruebas del desafío opcional, patrón de élite, botín y elección persistida:
+`godot --headless --path . --script res://tests/elite_tests.gd`.
 
 Pruebas de consulta del mazo y copias disponibles en recompensas:
 `godot --headless --path . --script res://tests/reward_consultation_tests.gd`.

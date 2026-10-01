@@ -7,6 +7,9 @@ const CardUpgrades = preload("res://src/card_upgrades.gd")
 const Relics = preload("res://src/relics.gd")
 var coins := 0
 var relics: Array[String] = []
+var elite_encounter := false
+const ELITE := {"name": "EL REVISOR DE CENIZA", "hp": 56, "coins": 45}
+const ELITE_PATTERN := [{"damage": 6, "hits": 2}, {"block": 8, "weak": 1}, {"damage": 16}]
 var save_store = preload("res://src/run_save.gd").new()
 var persistence_enabled := true
 var save_failed := false
@@ -237,8 +240,10 @@ func _checkpoint(state: String) -> void:
 	var version := 2 if run_deck.any(func(id: String): return id.ends_with("+")) else 1
 	if coins > 0 or not relics.is_empty():
 		version = 3
+	if elite_encounter:
+		version = 4
 	save_failed = not save_store.write({"version": version, "state": state, "faction": selected_faction,
-		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck, "coins": coins, "relics": relics})
+		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck, "coins": coins, "relics": relics, "elite": elite_encounter})
 	if save_failed:
 		var warning := _make_label("No se pudo guardar. " + save_store.last_error, 16, Color("ee6b7a"))
 		warning.position = Vector2(12, 2)
@@ -250,8 +255,9 @@ func _resume_run() -> void:
 		show_title_screen()
 		return
 	selected_faction = saved.faction
-	coins = int(saved.get("coins", 0)) if saved.version == 3 else 0
-	relics.assign(saved.get("relics", []) if saved.version == 3 else [])
+	coins = int(saved.get("coins", 0)) if saved.version >= 3 else 0
+	relics.assign(saved.get("relics", []) if saved.version >= 3 else [])
+	elite_encounter = saved.get("elite", false) if saved.version == 4 else false
 	run_deck.assign(saved.deck)
 	player_hp = int(saved.hp)
 	stage = int(saved.stage)
@@ -710,6 +716,7 @@ func _request_start_run(faction: String) -> void:
 	dialog.get_cancel_button().grab_focus()
 
 func start_run(faction: String) -> void:
+	elite_encounter = false
 	coins = 0
 	relics.clear()
 	selected_faction = faction
@@ -741,6 +748,8 @@ func show_route() -> void:
 	screen = "route"
 	var box := _journey_panel("EL CAMINO A SANTA VIGILIA", "Aldea → Sendero, refugio o ermita → Estación → Descanso → Monasterio")
 	var labels := ["Aldea: enfrentarse al Desvelado", "Sendero: combatir al Acechador", "Estación: combatir al Guardagujas", "Descansar junto al fuego (+15 Salud)", "Monasterio: enfrentarse al Custodio"]
+	if elite_encounter:
+		labels[2] = "Estación: desafío aceptado · Revisor de Ceniza"
 	for index in labels.size():
 		var button := _make_button(("✓ " if index < stage else "") + str(labels[index]))
 		button.disabled = index != stage
@@ -768,6 +777,11 @@ func show_route() -> void:
 		event_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		event_button.pressed.connect(_show_hermitage)
 		alternatives.add_child(event_button)
+	if stage == 2 and not elite_encounter:
+		var challenge := _make_button("DESAFÍO OPCIONAL · Revisor de Ceniza · 56 Salud · 45 monedas", 17)
+		challenge.name = "EliteChallengeButton"
+		challenge.pressed.connect(_show_encounter_briefing.bind(true))
+		box.add_child(challenge)
 	if stage == 3:
 		var camp_choices := HBoxContainer.new()
 		box.add_child(camp_choices)
@@ -878,13 +892,20 @@ func _buy_relic(id: String) -> void:
 		status.text = _journey_status()
 	_show_relics()
 
-func _encounter_briefing_text(encounter_stage: int) -> String:
+func _battle_pattern() -> Array:
+	return ELITE_PATTERN if elite_encounter and stage == 2 else ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0])
+
+func _victory_coins() -> int:
+	return int(ELITE.coins) if elite_encounter and stage == 2 else int(Relics.REWARDS.get(stage, 0))
+
+func _encounter_briefing_text(encounter_stage: int, elite_preview := false) -> String:
 	if not ENCOUNTERS.has(encounter_stage):
 		return ""
-	var encounter: Dictionary = ENCOUNTERS[encounter_stage]
+	var is_elite := encounter_stage == 2 and (elite_preview or elite_encounter)
+	var encounter: Dictionary = ELITE if is_elite else ENCOUNTERS[encounter_stage]
 	var lines: Array[String] = ["%s · %d Salud" % [encounter.name, encounter.hp], "", "SECUENCIA DE ACCIONES BASE"]
-	lines.insert(1, "Victoria: +%d %s" % [Relics.REWARDS[encounter_stage], Relics.CURRENCIES[selected_faction]])
-	var pattern: Array = ENEMY_PATTERNS[encounter_stage]
+	lines.insert(1, "Victoria: +%d %s" % [ELITE.coins if is_elite else Relics.REWARDS[encounter_stage], Relics.CURRENCIES[selected_faction]])
+	var pattern: Array = ELITE_PATTERN if is_elite else ENEMY_PATTERNS[encounter_stage]
 	for index in pattern.size():
 		var action: Dictionary = pattern[index]
 		var parts: Array[String] = []
@@ -898,15 +919,18 @@ func _encounter_briefing_text(encounter_stage: int) -> String:
 			parts.append("obtiene Etéreo")
 		lines.append("%d. %s" % [index + 1, " · ".join(parts)])
 	lines.append("\nLa secuencia se repite. Los valores de ataque son por golpe, antes de estados y Bloqueo. Durante el combate consulta la intención actual: Débil y Posesión pueden reducir el daño.")
-	if encounter_stage in [1, 4]:
+	if encounter_stage in [1, 4] or is_elite:
 		lines.append("Etéreo evita solo un golpe, no todo un ataque múltiple.")
 	return "\n".join(lines)
 
-func _show_encounter_briefing() -> void:
+func _show_encounter_briefing(elite_preview := false) -> void:
 	if screen != "route" or not ENCOUNTERS.has(stage) or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+		return
+	if elite_preview and (stage != 2 or elite_encounter):
 		return
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
+	overlay.set_meta("elite_preview", elite_preview)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var margin := MarginContainer.new()
@@ -920,17 +944,40 @@ func _show_encounter_briefing() -> void:
 	var info := RichTextLabel.new()
 	info.name = "EncounterBriefing"
 	info.bbcode_enabled = false
-	info.text = _encounter_briefing_text(stage)
+	info.text = _encounter_briefing_text(stage, elite_preview)
 	info.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	info.add_theme_font_size_override("normal_font_size", 22)
 	box.add_child(info)
-	box.add_child(_make_label("Solo consulta: no inicia el combate ni modifica la expedición.", 17))
+	var notice := _make_label("Solo consulta: no inicia el combate ni modifica la expedición.", 17)
+	notice.name = "BriefingNotice"
+	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(notice)
+	if elite_preview:
+		notice.text = "Sustituye al Guardagujas: más peligro y 45 monedas en vez de 25, con la misma elección de carta. Aceptar guarda la elección e inicia el combate; no podrás cambiar de rival en esta expedición."
+		var accept := _make_button("ACEPTAR DESAFÍO E INICIAR COMBATE")
+		accept.name = "AcceptEliteButton"
+		accept.pressed.connect(_accept_elite)
+		box.add_child(accept)
 	var back := _make_button("VOLVER A LA RUTA")
 	back.name = "CloseBriefing"
 	back.custom_minimum_size.y = 48
 	back.pressed.connect(overlay.queue_free)
 	box.add_child(back)
 	back.grab_focus()
+
+func _accept_elite() -> void:
+	if screen != "route" or stage != 2 or elite_encounter or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("elite_preview", false):
+		return
+	elite_encounter = true
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		elite_encounter = false
+		get_node("DeckOverlay").find_child("BriefingNotice", true, false).text = "No se pudo guardar la elección. El combate no ha comenzado; puedes reintentar o volver a la ruta."
+		return
+	var overlay := get_node("DeckOverlay")
+	remove_child(overlay)
+	overlay.queue_free()
+	_enter_stage()
 
 func _show_hermitage() -> void:
 	if screen != "route" or stage != 1 or has_node("DeckOverlay"):
@@ -987,7 +1034,7 @@ func _enter_stage() -> void:
 	if stage == 3:
 		_rest(15)
 		return
-	var encounter: Dictionary = ENCOUNTERS.get(stage, ENCOUNTERS[0])
+	var encounter: Dictionary = ELITE if elite_encounter and stage == 2 else ENCOUNTERS.get(stage, ENCOUNTERS[0])
 	encounter_name = encounter.name
 	enemy_max_hp = encounter.hp
 	start_battle(selected_faction)
@@ -1058,6 +1105,7 @@ func _take_reward(id: String) -> void:
 		if id not in REWARDS[selected_faction]:
 			return
 		run_deck.append(id)
+	elite_encounter = false
 	stage += 1
 	show_route()
 
@@ -1266,7 +1314,7 @@ func _begin_player_turn() -> void:
 	_refresh_battle()
 
 func _set_enemy_intent() -> void:
-	var pattern: Array = ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0])
+	var pattern: Array = _battle_pattern()
 	var action: Dictionary = pattern[enemy_pattern % pattern.size()]
 	enemy_intent_damage = int(action.get("damage", 0))
 	enemy_intent_hits = int(action.get("hits", 1))
@@ -1668,7 +1716,7 @@ func _enemy_action_card() -> Dictionary:
 	# Enemy turns are explicit cards, so Conversion copies the action actually
 	# played, not a future intention or an unrelated player card.
 	var faction: String = {0: "Fantasmas", 1: "Hombres Lobo", 2: "Humanos", 4: "Fantasmas"}.get(stage, "Fantasmas")
-	return {"id": "ENEMY_ACTION", "nombre": "%s · acción %d" % [encounter_name.capitalize(), enemy_pattern % ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0]).size() + 1],
+	return {"id": "ENEMY_ACTION", "nombre": "%s · acción %d" % [encounter_name.capitalize(), enemy_pattern % _battle_pattern().size() + 1],
 		"faccion": faction, "tipo": "Ataque" if enemy_intent_damage > 0 else "Habilidad", "rareza": "Enemiga", "coste": 2,
 		"damage": enemy_intent_damage, "hits": enemy_intent_hits, "block": enemy_intent_block, "weak": enemy_intent_weak, "ethereal": enemy_intent_ethereal,
 		"efecto": ("%d daño × %d. Obtén %d Bloqueo y aplica %d Débil." % [enemy_intent_damage, enemy_intent_hits, enemy_intent_block, enemy_intent_weak]) + (" Obtén Etéreo." if enemy_intent_ethereal else ""),
@@ -1880,7 +1928,7 @@ func _finish_battle(victory: bool) -> void:
 	screen = "won" if victory else "lost"
 	battle_over = true
 	if victory:
-		var earned: int = Relics.REWARDS.get(stage, 0)
+		var earned: int = _victory_coins()
 		coins += earned
 		_log_combat("Botín: +%d %s (total: %d)." % [earned, Relics.CURRENCIES[selected_faction], coins])
 		var healing := Relics.bonus(relics, "heal")
@@ -1908,7 +1956,7 @@ func _finish_battle(victory: bool) -> void:
 		end_turn_button.pressed.connect(show_faction_selection)
 	_log_combat(message_label.text)
 	if victory:
-		message_label.text += " · +%d %s" % [Relics.REWARDS.get(stage, 0), Relics.CURRENCIES[selected_faction]]
+		message_label.text += " · +%d %s" % [_victory_coins(), Relics.CURRENCIES[selected_faction]]
 	var summary := _make_label(_combat_summary_text(), 20, Color("d7d9df"))
 	summary.name = "CombatSummary"
 	summary.tooltip_text = "Solo este combate. Daño y curación efectivos, sin exceso sobre la Salud disponible. Sangrado se muestra aparte del daño directo. Etéreo cuenta el golpe ya reducido por Débil y Posesión."
