@@ -264,7 +264,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 			description = "Selecciona una copia para retirarla de esta expedición. Avanzarás al jefe SIN recuperar Salud."
 		elif upgrade_at_camp:
 			heading = "MEJORAR UNA CARTA"
-			description = "Selecciona una copia: se muestra su versión mejorada (+). Avanzarás SIN curarte. Solo ataques y defensas básicos disponibles."
+			description = "Selecciona una copia: se muestra su versión mejorada (+). Avanzarás SIN curarte. Las mejoras pendientes están desactivadas."
 	else:
 		if screen not in ["battle", "won", "lost"]:
 			return
@@ -1082,29 +1082,29 @@ func _play_card(card: Dictionary) -> void:
 			barricade_active = true
 			action_message += "conservas el Bloqueo entre turnos durante este combate."
 		"V009":
-			enemy_weak += 2
+			enemy_weak += int(card.get("weak_amount", 2))
 			_gain_thirst(1)
-			action_message += "2 de Débil y 1 de Sed."
+			action_message += "%d de Débil y 1 de Sed." % int(card.get("weak_amount", 2))
 		"H004":
-			action_message += _deal_damage(3)
+			action_message += _deal_damage(int(card.get("direct_damage", 3)))
 			_apply_vulnerable(2)
 		"H005":
-			enemy_weak += 1
+			enemy_weak += int(card.get("weak_amount", 1))
 			_draw_cards(1)
 			action_message += "Débil y robo de una carta."
 		"F006":
-			enemy_weak += 2
+			enemy_weak += int(card.get("weak_amount", 2))
 			faction_resource = mini(8, faction_resource + 1)
-			action_message += "2 de Débil y 1 de Ectoplasma."
+			action_message += "%d de Débil y 1 de Ectoplasma." % int(card.get("weak_amount", 2))
 		"H002":
-			player_block += 4
+			player_block += int(card.get("block_amount", 4))
 			consecrated += 1
-			action_message += "4 de Bloqueo y Consagración."
+			action_message += "%d de Bloqueo y Consagración." % int(card.get("block_amount", 4))
 		"H003": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"L002":
-			_gain_fury(2)
+			_gain_fury(int(card.get("fury_amount", 2)))
 			enemy_weak += 1
-			action_message += "2 de Furia y 1 de Débil."
+			action_message += "%d de Furia y 1 de Débil." % int(card.get("fury_amount", 2))
 		"L018":
 			enemy_marked = true
 			_draw_cards(1)
@@ -1115,13 +1115,13 @@ func _play_card(card: Dictionary) -> void:
 			_start_scout()
 		"V007": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"V014":
-			faction_resource = maxi(0, faction_resource - 2)
+			faction_resource = maxi(0, faction_resource - int(card.get("thirst_reduction", 2)))
 			_draw_cards(1)
 			action_message += "reduces la Sed y robas 1 carta."
 		"F001":
-			faction_resource = mini(8, faction_resource + 1)
+			faction_resource = mini(8, faction_resource + int(card.get("ectoplasm_amount", 1)))
 			_draw_cards(1)
-			action_message += "1 de Ectoplasma y robas 1 carta."
+			action_message += "%d de Ectoplasma y robas 1 carta." % int(card.get("ectoplasm_amount", 1))
 		"F003": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"F015":
 			faction_resource -= 2
@@ -1187,7 +1187,7 @@ func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
 			_log_combat("%s · golpe %d: %s" % [card.nombre, hit + 1, result])
 	match id:
 		"L004":
-			enemy_bleed += _potency(2, scale)
+			enemy_bleed += _potency(int(card.get("bleed_amount", 2)), scale)
 			_gain_fury(_potency(1, scale))
 		"L006":
 			enemy_weak += _potency(2, scale)
@@ -1195,7 +1195,7 @@ func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
 				faction_resource -= 2
 				enemy_bleed += _potency(2, scale)
 		"V005":
-			_heal_health(_potency(3, scale))
+			_heal_health(_potency(int(card.get("heal_amount", 3)), scale))
 			faction_resource = maxi(0, faction_resource - _potency(2, scale))
 		"V006": _gain_thirst(_potency(1, scale))
 		"F004": faction_resource = mini(8, faction_resource + _potency(1, scale))

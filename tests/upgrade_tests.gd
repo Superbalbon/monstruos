@@ -24,7 +24,7 @@ func run() -> void:
 	var cancel := InputEventAction.new()
 	cancel.action = "ui_cancel"
 	cancel.pressed = true
-	for id in game.CardUpgrades.VALUES:
+	for id in ["H001", "H003", "L001", "L029", "V001", "V007", "F009", "F003"]:
 		var base: Dictionary = game.cards_by_id[id].duplicate(true)
 		game.start_run(base.faccion)
 		game._show_deck("", false, true)

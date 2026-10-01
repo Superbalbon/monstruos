@@ -25,7 +25,7 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 
 ## Estado
 
-El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Ocho ataques y defensas básicos pueden mejorarse en el descanso. Las demás mejoras y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
+El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Hay 25 cartas con mejora disponible en el descanso. Las otras 15 mejoras y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
 
 ## Ejecutar el prototipo
 
@@ -150,7 +150,7 @@ Son alternativas excluyentes: mejorar avanza al monasterio sin recuperar Salud.
 La selección muestra el resultado y su ayuda compara el efecto actual con el
 mejorado. Elige una copia concreta; Esc cancela sin consumir el descanso.
 
-Mejoras implementadas:
+Las ocho mejoras básicas:
 
 | Facción | Ataque | Defensa |
 |---|---|---|
@@ -158,6 +158,22 @@ Mejoras implementadas:
 | Hombres Lobo | Garra Salvaje: 6 → 9 daño | Piel Gruesa: 5 → 8 Bloqueo |
 | Vampiros | Mordisco Vampírico: 6 → 9 daño | Velo de Sombras: 5 → 8 Bloqueo |
 | Fantasmas | Toque Gélido: 6 → 9 daño | Velo Fantasmal: 5 → 8 Bloqueo |
+
+Otras 17 mejoras implementadas (conservan los efectos y costes no mencionados):
+
+- Humanos: Cruz Sagrada da 6 Bloqueo; Trampa para Lobos causa 5 daño;
+  Campana aplica 2 Débil; Antorcha causa 10 daño.
+- Hombres Lobo: Aullido genera 3 Furia; Mordida Rabiosa causa 7 daño y 3 Sangrado;
+  Manada Feroz hace tres golpes de 5; Colmillo Venenoso causa 6 daño;
+  Lobo Solitario causa 11 daño (7 con aliados).
+- Vampiros: Drenaje Vital causa 13 daño y cura 4; Colmillo Noble causa 11 daño;
+  Hipnosis aplica 3 Débil; Sangre Pura reduce la Sed en 3.
+- Fantasmas: Susurro genera 2 Ectoplasma; Ectoplasma Frío causa 7 daño;
+  Aparición causa 10 daño; Cadena Etérea aplica 3 Débil.
+
+Los descuentos de Manada, el agotamiento, los límites de recursos y los efectos
+condicionales se conservan. Eco repite los valores mejorados y los redondea con
+las mismas reglas que los de las cartas base.
 
 El nombre lleva **+** y la mejora se conserva al robar, descartar y cargar la
 expedición. Eco repite también el daño mejorado. Se reutiliza la ilustración base;
@@ -325,3 +341,6 @@ Pruebas del encuentro narrativo, cuatro facciones, costes, cancelación y guarda
 
 Pruebas de las ocho mejoras, copia individual, cancelación, efectos, Eco y guardado:
 `godot --headless --path . --script res://tests/upgrade_tests.gd`.
+
+Pruebas de las otras 17 mejoras, estados, recursos, límites, descuentos y guardado:
+`godot --headless --path . --script res://tests/advanced_upgrade_tests.gd`.
