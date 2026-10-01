@@ -39,7 +39,7 @@ func run() -> void:
 		"F005": {"enemy_hp": 90, "enemy_vulnerable": 1},
 		"F006": {"enemy_weak": 3, "faction_resource": 5}
 	}
-	check(game.CardUpgrades.VALUES.size() == 25, "Veinticinco mejoras disponibles")
+	check(game.CardUpgrades.VALUES.size() == 40, "Cuarenta mejoras disponibles")
 	for id in expectations:
 		var original: Dictionary = game.cards_by_id[id].duplicate(true)
 		game.start_run(original.faccion)

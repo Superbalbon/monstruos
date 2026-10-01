@@ -25,7 +25,7 @@ En 1897, una herida sobrenatural se abre bajo la comarca de Valdegrís. Humanos,
 
 ## Estado
 
-El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Hay 25 cartas con mejora disponible en el descanso. Las otras 15 mejoras y el resto del catálogo nominal de 200 quedan pendientes; el balance es provisional.
+El prototipo de Godot permite elegir una de las cuatro facciones y completar una expedición con combates, recompensas, descanso, jefe y puntos de guardado. Las 40 cartas base del prototipo están implementadas y disponibles en el catálogo: 10 por facción. Las 40 tienen una mejora disponible en el descanso. Ampliar al resto del catálogo nominal de 200 queda pendiente; el balance es provisional.
 
 ## Ejecutar el prototipo
 
@@ -83,7 +83,7 @@ Las recompensas son una selección fija por facción de efectos implementados.
 Hay ocho efectos nuevos: Trampa para Lobos, Campana de la Iglesia,
 Colmillo Venenoso, Lobo Solitario, Drenaje Vital, Colmillo Noble,
 Ectoplasma Frío y Cadena Etérea. Las 40 cartas base y los aliados persistentes
-ya están implementados; las mejoras no incluidas en la sección siguiente siguen siendo propuestas de diseño.
+ya están implementados, junto con las 40 mejoras descritas en la sección siguiente.
 Descontrol y las penalizaciones de Sed
 ya funcionan; los estados del jugador se muestran junto a su recurso.
 El balance de la ruta es provisional.
@@ -174,6 +174,26 @@ Otras 17 mejoras implementadas (conservan los efectos y costes no mencionados):
 Los descuentos de Manada, el agotamiento, los límites de recursos y los efectos
 condicionales se conservan. Eco repite los valores mejorados y los redondea con
 las mismas reglas que los de las cartas base.
+
+Las 15 mejoras especiales completan el catálogo:
+
+- Milicia Organizada y Alfa Dominante cuestan 1; Barricada cuesta 2;
+  Lamento Nocturno cuesta 1.
+- Cazador Experto empieza en la mano inicial, ocupando uno de sus cinco huecos;
+  no se activa automáticamente. Héroe Local otorga 12 Bloqueo al jugarse.
+- Luna Llena genera 2 Furia al entrar (puede provocar Descontrol) y mantiene
+  su efecto recurrente. Pista de Presa deja de agotarse.
+- Niebla Eterna otorga 5 Bloqueo en su primera activación de cada turno.
+  Sed Insaciable añade 1 Ímpetu solo en su primera activación del combate;
+  conserva el robo una vez por turno y exige que la Sed aumente realmente.
+- Murciélago Espía mira tres cartas, roba una y devuelve las restantes arriba
+  en su orden original. Si quedan menos, ofrece las disponibles.
+- Conversión rebaja en 2 el coste de la copia (mínimo 0); sigue siendo temporal.
+- Posesión Leve consume 1 Ectoplasma; Paso a Través consume 2.
+  Eco del Pasado repite al 75 %, redondeando abajo con mínimo 1 por efecto positivo.
+
+Las pilas de Poderes y Aliados muestran la versión que se jugó, incluido su «+».
+Los efectos activos se reinician entre combates, pero las mejoras del mazo no.
 
 El nombre lleva **+** y la mejora se conserva al robar, descartar y cargar la
 expedición. Eco repite también el daño mejorado. Se reutiliza la ilustración base;
@@ -344,3 +364,6 @@ Pruebas de las ocho mejoras, copia individual, cancelación, efectos, Eco y guar
 
 Pruebas de las otras 17 mejoras, estados, recursos, límites, descuentos y guardado:
 `godot --headless --path . --script res://tests/advanced_upgrade_tests.gd`.
+
+Pruebas de las 15 mejoras especiales y acceso/guardado de las 40 mejoras:
+`godot --headless --path . --script res://tests/special_upgrade_tests.gd`.

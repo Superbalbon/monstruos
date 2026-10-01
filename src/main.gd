@@ -68,6 +68,8 @@ var possession_active := false
 var player_ethereal := false
 var barricade_active := false
 var active_powers: Array[String] = []
+var power_cards: Dictionary = {}
+var thirst_energy_used := false
 var hunter_triggered := false
 var mist_triggered := false
 var thirst_triggered := false
@@ -281,7 +283,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 				description = "Fuera de circulación hasta el siguiente combate."
 			"Poderes":
 				for id in _active_power_ids():
-					display_cards.append(cards_by_id[id])
+					display_cards.append(power_cards.get(id, cards_by_id[id]))
 				description = "Efectos persistentes activos durante este combate. No vuelven a las pilas."
 			"Aliados":
 				display_cards.assign(allies)
@@ -765,6 +767,9 @@ func start_battle(faction: String) -> void:
 	for card_id in run_deck:
 		draw_pile.append(CardUpgrades.resolve(cards_by_id, card_id))
 	draw_pile.shuffle()
+	for index in range(draw_pile.size() - 1, -1, -1):
+		if draw_pile[index].get("innate", false):
+			hand.append(draw_pile.pop_at(index))
 	player_block = 0
 	energy = MAX_ENERGY
 	faction_resource = 0
@@ -777,6 +782,8 @@ func start_battle(faction: String) -> void:
 	player_ethereal = false
 	barricade_active = false
 	active_powers.clear()
+	power_cards.clear()
+	thirst_energy_used = false
 	allies.clear()
 	hero_triggered = false
 	last_enemy_card.clear()
@@ -1015,7 +1022,7 @@ func _play_block_reason(card: Dictionary) -> String:
 			elif last_enemy_card.get("faccion") == "Vampiros":
 				reasons.append("La última carta enemiga es vampírica y no puede copiarse.")
 		"F002", "F008", "F015":
-			var needed := 3 if card.id == "F008" else 2
+			var needed := int(card.get("resource_cost", 3 if card.id == "F008" else 2))
 			if faction_resource < needed:
 				reasons.append("Necesitas %d Ectoplasma; tienes %d." % [needed, faction_resource])
 			if card.id == "F002":
@@ -1043,6 +1050,7 @@ func _play_card(card: Dictionary) -> void:
 	combat_stats.energy += paid_cost
 	var card_id: String = card["id"]
 	var exhausts := card_id in ["L018", "V008", "V014", "F001", "F008", "F015"]
+	exhausts = bool(card.get("exhausts", exhausts))
 	var action_message: String = str(card["nombre"]) + ": "
 	_log_combat("Juegas %s (coste %d)." % [card["nombre"], paid_cost])
 	# Remove before drawing so this exact instance cannot be selected twice.
@@ -1056,30 +1064,34 @@ func _play_card(card: Dictionary) -> void:
 		"H006":
 			action_message += "la Milicia permanece junto a tus aliados."
 		"H009":
-			action_message += _gain_block(8) + " Héroe Local permanece en juego."
+			action_message += _gain_block(int(card.get("block_amount", 8))) + " Héroe Local permanece en juego."
 		"F007":
 			enemy_weak += 2
 			faction_resource = mini(8, faction_resource + 2)
 			action_message += "2 de Débil y 2 de Ectoplasma."
 		"V008":
 			var copy := last_enemy_card.duplicate(true)
-			copy.coste = maxi(0, int(copy.coste) - 1)
+			copy.coste = maxi(0, int(copy.coste) - int(card.get("copy_discount", 1)))
 			copy.temporal = true
 			hand.append(copy)
 			action_message += "creas " + str(copy.nombre) + " temporal (coste %d)." % int(copy.coste)
 		"H008", "L003", "L007", "V002", "V003":
 			active_powers.append(card_id)
+			power_cards[card_id] = card.duplicate(true)
+			if int(card.get("on_play_fury", 0)) > 0:
+				_gain_fury(int(card.on_play_fury))
 			action_message += "poder activo durante este combate."
 		"F002":
-			faction_resource -= 2
+			faction_resource -= int(card.get("resource_cost", 2))
 			possession_active = true
 			action_message += "reduces a la mitad cada golpe de la intención actual."
 		"F008":
-			faction_resource -= 3
+			faction_resource -= int(card.get("resource_cost", 3))
 			player_ethereal = true
 			action_message += "Etéreo: evitarás el siguiente golpe. Agota."
 		"H010":
 			barricade_active = true
+			power_cards[card_id] = card.duplicate(true)
 			action_message += "conservas el Bloqueo entre turnos durante este combate."
 		"V009":
 			enemy_weak += int(card.get("weak_amount", 2))
@@ -1112,7 +1124,7 @@ func _play_card(card: Dictionary) -> void:
 		"L029": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"V004":
 			action_message += "examina las próximas cartas."
-			_start_scout()
+			_start_scout(int(card.get("scout_count", 2)))
 		"V007": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"V014":
 			faction_resource = maxi(0, faction_resource - int(card.get("thirst_reduction", 2)))
@@ -1125,14 +1137,15 @@ func _play_card(card: Dictionary) -> void:
 		"F003": action_message += _gain_block(int(card.get("block_amount", 5)))
 		"F015":
 			faction_resource -= 2
-			action_message += _resolve_attack_card(last_attack_card, 0.5) + " mediante Eco."
+			action_message += _resolve_attack_card(last_attack_card, float(card.get("echo_scale", 0.5))) + " mediante Eco."
 	if str(card.tipo) == "Ataque":
 		last_attack_card = card.duplicate(true)
 
 	if "V002" in active_powers and not mist_triggered and "Niebla" in card.get("etiquetas", []):
 		mist_triggered = true
-		player_block += 3
-		_log_combat("Niebla Eterna: +3 Bloqueo por la primera carta de Niebla del turno.")
+		var mist_block := int(power_cards.get("V002", {}).get("mist_block", 3))
+		player_block += mist_block
+		_log_combat("Niebla Eterna: +%d Bloqueo por la primera carta de Niebla del turno." % mist_block)
 	if str(card.tipo) == "Aliado":
 		allies.append(card)
 	elif card_id in _active_power_ids():
@@ -1226,6 +1239,11 @@ func _gain_thirst(amount: int) -> void:
 	faction_resource = clampi(faction_resource + amount, 0, 10)
 	if faction_resource > previous and "V003" in active_powers and not thirst_triggered:
 		thirst_triggered = true
+		var bonus := int(power_cards.get("V003", {}).get("first_thirst_energy", 0))
+		if bonus > 0 and not thirst_energy_used:
+			thirst_energy_used = true
+			energy += bonus
+			_log_combat("Sed Insaciable: +%d Ímpetu por su primera activación del combate." % bonus)
 		var previous_hand := hand.size()
 		_draw_cards(1)
 		_log_combat("Sed Insaciable: robas %d carta al aumentar la Sed." % (hand.size() - previous_hand))
@@ -1267,9 +1285,9 @@ func _gain_block(amount: int) -> String:
 	player_block += amount
 	return "%d de Bloqueo." % amount
 
-func _start_scout() -> void:
+func _start_scout(amount := 2) -> void:
 	var choices: Array[Dictionary] = []
-	for index in 2:
+	for index in amount:
 		if _ensure_draw_card():
 			choices.append(draw_pile.pop_back())
 	if choices.is_empty():
@@ -1305,7 +1323,7 @@ func _resolve_scout(index: int, choices: Array[Dictionary], overlay: ColorRect) 
 		return
 	var chosen: Dictionary = choices[index]
 	hand.append(chosen)
-	for other in choices.size():
+	for other in range(choices.size() - 1, -1, -1):
 		if other != index:
 			draw_pile.append(choices[other])
 	choosing_card = false
@@ -1444,7 +1462,7 @@ func _refresh_battle() -> void:
 	if barricade_active:
 		player_status.text += " · Barricada"
 	for id in active_powers:
-		player_status.text += " · " + str(cards_by_id[id].nombre)
+		player_status.text += " · " + str(power_cards.get(id, cards_by_id[id]).nombre)
 	player_status.tooltip_text = "Consagración: +3 al siguiente ataque; consume una carga."
 	match selected_faction:
 		"Hombres Lobo": player_status.tooltip_text = "Furia 10: pierde 3 Salud, vuelve a 5 y gana +2 daño de ataque este turno. Si ocurre al recibir un ataque, dura tu próximo turno."

@@ -94,7 +94,7 @@ func run() -> void:
 	game.hand.append(echo)
 	game._play_card(echo)
 	check(game.enemy_hp == 87, "Eco conserva daño de ataque mejorado: nueve más cuatro")
-	check(game.CardUpgrades.resolve(game.cards_by_id, "H008+").is_empty(), "No admite mejora sin implementar")
+	check(game.CardUpgrades.resolve(game.cards_by_id, "INVALID+").is_empty(), "No admite carta desconocida")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	game.queue_free()
 	other.queue_free()

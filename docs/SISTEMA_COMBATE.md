@@ -8,7 +8,7 @@
 - Cuando el mazo se vacía, el descarte se baraja y forma un mazo nuevo.
 - El **Bloqueo** absorbe daño y desaparece al comenzar el turno del jugador, salvo con Barricada activa.
 - Cada enemigo muestra su siguiente intención: ataque, defensa, estado o acción especial.
-- Las 40 cartas base están implementadas. En el descanso final puedes mejorar una copia de tu mazo en vez de curarte o retirarla. Hay 25 mejoras disponibles; las otras 15 siguen siendo propuestas. La copia mejorada conserva su coste y añade «+» a su nombre. La ayuda de cada carta indica si su mejora ya está disponible.
+- Las 40 cartas base y sus 40 mejoras están implementadas. En el descanso final puedes mejorar una copia de tu mazo en vez de curarte o retirarla. La copia añade «+» a su nombre; algunas mejoras reducen su coste. Solo se realiza una mejora por expedición en el prototipo. La vista previa indica el resultado exacto antes de elegir.
 
 Estos valores son un punto de partida para pruebas, no cifras definitivas.
 
