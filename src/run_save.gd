@@ -2,6 +2,7 @@ extends RefCounted
 
 const CardUpgrades = preload("res://src/card_upgrades.gd")
 const Relics = preload("res://src/relics.gd")
+const Biomes = preload("res://src/biomes.gd")
 
 var path := "user://expedicion.json"
 var last_error := ""
@@ -45,7 +46,7 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 	var version: Variant = value.get("version")
 	if not (version is int or version is float) or not is_finite(float(version)) or float(version) != floor(float(version)):
 		return false
-	if int(version) not in [1, 2, 3, 4] or value.get("state") not in ["route", "reward", "finished"]:
+	if int(version) not in [1, 2, 3, 4, 5, 6, 7] or value.get("state") not in ["route", "reward", "finished"]:
 		return false
 	var faction: Variant = value.get("faction")
 	if not faction is String or not starters.has(faction):
@@ -70,10 +71,40 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 			return false
 	if value.stage < 0 or value.stage > 4 or value.hp < 0 or value.hp > 50:
 		return false
-	if value.version == 4:
+	if value.version >= 4:
 		if not value.get("elite") is bool:
 			return false
 		if value.elite and int(value.stage) != 2:
+			return false
+	if value.version >= 6:
+		if not value.get("biome") is String or not Biomes.AREAS.has(value.biome) or value.stage < 2 or value.elite:
+			return false
+		if not value.get("city_path") is String or not value.get("arena") is Dictionary or not value.arena.is_empty():
+			return false
+	if value.version == 7:
+		if value.get("biome_path") not in ["pending", "combat", "refuge", "merchant"]:
+			return false
+		if value.biome_path == "pending" and (int(value.stage) != 2 or value.state != "route"):
+			return false
+		if value.biome_path == "refuge" and value.stage < 3:
+			return false
+		if value.biome_path == "merchant" and int(value.stage) == 2 and value.state != "route":
+			return false
+	if value.version == 5 or (value.version >= 6 and not value.city_path.is_empty()):
+		if value.get("city_path") not in ["merchant", "refuge", "arena"] or not value.get("arena") is Dictionary or value.stage < 1:
+			return false
+		if not value.arena.is_empty():
+			if value.city_path != "arena" or int(value.stage) != 1 or value.state != "route" or value.elite:
+				return false
+			for key in ["entry_hp", "wave"]:
+				var number: Variant = value.arena.get(key)
+				if not (number is int or number is float) or not is_finite(float(number)) or float(number) != floor(float(number)):
+					return false
+			if value.arena.entry_hp < 1 or value.arena.entry_hp > 50 or value.arena.wave < 1 or value.arena.wave > 3:
+				return false
+		elif int(value.stage) == 1 and value.city_path != "merchant":
+			return false
+		if int(value.stage) == 1 and value.state != "route":
 			return false
 	if value.state != "finished" and value.hp == 0:
 		return false
@@ -92,7 +123,7 @@ func valid(value: Variant, cards: Dictionary, starters: Dictionary, rewards: Dic
 		if id.ends_with("+"):
 			id = id.trim_suffix("+")
 			upgrades += 1
-			if int(value.version) not in [2, 3, 4] or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
+			if int(value.version) not in [2, 3, 4, 5, 6, 7] or int(value.stage) != 4 or value.deck.size() == 9 or upgrades > 1 or not CardUpgrades.can_upgrade(id):
 				return false
 		if not cards.has(id):
 			return false

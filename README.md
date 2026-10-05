@@ -37,6 +37,40 @@ No requiere complementos ni recursos externos.
 
 ## Controles
 
+- En combate, las barras de Salud cambian a ámbar al 50 % y a rojo al 25 %.
+  Las cifras exactas permanecen debajo; el Bloqueo no se suma a la barra.
+  Si se acumulan muchos estados, el resumen termina en puntos suspensivos:
+  pasa el ratón sobre él para consultar la lista completa. Lo mismo se aplica
+  a las intenciones enemigas largas, que ocupan como máximo dos líneas.
+  La ayuda de la intención también muestra una **previsión defensiva**: golpes,
+  daño evitado por Etéreo, Bloqueo de Milicia, daño absorbido y daño sin cubrir.
+  Se actualiza al jugar cartas. Débil y Posesión ya están aplicados al daño.
+  No predice la Salud final: no simula interrupciones por muerte o contraataques,
+  ni las pérdidas por Sed o Descontrol.
+  **VER**, junto a la intención, abre esta información en una ventana de
+  consulta accesible con teclado. **Volver al combate** o **Esc** la cierra
+  sin terminar el turno, y devuelve el foco al botón.
+  Los avisos largos de combate se abrevian para no desplazar la interfaz:
+  pasa el ratón por el mensaje para leerlo completo. **Historial** conserva
+  los eventos del combate para consultarlos y copiarlos.
+
+- En la mano, el pie de cada carta indica **JUGABLE** o **NO DISPONIBLE**.
+  El motivo del bloqueo aparece en la ayuda al pasar el ratón y en **VER**.
+  El catálogo y las recompensas conservan el tipo y la rareza en ese espacio.
+
+- Un coste como **2→1⚡** indica coste base 2 y coste actual 1. Los descuentos
+  aparecen en verde y se actualizan al cambiar las condiciones del combate.
+  Las mejoras permanentes ya están incluidas en el coste base de esa copia.
+  Al navegar con **Tab**, la carta enfocada tiene un contorno claro; recibir
+  el foco no la juega.
+  Las listas se desplazan automáticamente para mostrar el control enfocado,
+  también en manos largas, recompensas, mazo y catálogo.
+
+- Pulsa **VER** en una carta o haz **clic derecho** para ampliar la ilustración
+  y leer sus reglas completas. Funciona también en cartas deshabilitadas y
+  recompensas, sin jugarlas ni elegirlas. **Cerrar** o **Esc** vuelve a la pantalla
+  anterior. La ventana muestra la mejora y el coste actual cuando cambia.
+
 - **Guía de reglas**, en el menú y la ruta, o **Reglas**, durante el combate,
   explica turnos, estados, las cuatro facciones y guardado. Elige un tema en
   el desplegable y desplaza el texto si es necesario. **Volver** o **Esc** cierra
@@ -58,6 +92,63 @@ No requiere complementos ni recursos externos.
 - El Murciélago Espía abre una selección de las siguientes cartas del mazo.
 
 ## Ruta del prototipo
+
+### Ciudad de Valdegrís y arena
+
+Tras vencer al Desvelado y elegir la recompensa, pulsa **CIUDAD: elegir camino**
+en el cruce. Este desvío conserva las opciones de la ruta anterior y ofrece tres
+caminos mutuamente excluyentes al confirmarlos:
+
+- **Mercado urbano:** compra reliquias y continúa a la estación, sin curarte.
+  Humanos tienen un descuento de 5 Reales por reliquia solo en este mercado.
+- **Refugio:** recupera 12 Salud (máximo 50), sin compras ni recompensa de carta.
+- **Arena del Umbral:** tres oleadas de 24, 36 y 50 Salud; premios de 10, 15 y
+  25 monedas. Puedes retirarte entre combates. Al caer, retirarte o completar
+  las oleadas recuperas exactamente la Salud de entrada, conservas el botín
+  y avanzas a la estación. Caer en la arena no termina la expedición.
+
+La arena comparte Salud entre oleadas, reinicia los estados de combate y aplica
+las reliquias en cada combate. No concede cartas y no se puede repetir.
+El guardado conserva el camino y la próxima oleada; cerrar durante un combate
+reinicia solo esa oleada. Las decisiones de entrada requieren guardar con éxito.
+El formato 5 acepta los guardados anteriores (1–4).
+
+Esta es la primera versión funcional: ciudad presentada mediante interfaz de
+decisiones, sin fondo ilustrado nuevo. Bosque, cementerio y castillo también
+ofrecen caminos internos; la arena permanece exclusivamente en la ciudad.
+
+Pruebas: `godot --headless --path . --script res://tests/arena_tests.gd`.
+
+### Desvíos de bosque, cementerio y castillo
+
+Antes de combatir en la estación, pulsa **BOSQUE · CEMENTERIO · CASTILLO**.
+La ficha muestra rival, Salud, secuencia de ataques y efecto para tu estirpe.
+Entrar sustituye al Guardagujas y al desafío del Revisor y guarda el escenario.
+Dentro eliges un camino: combate, refugio (+12 Salud sin botín ni carta) o
+mercader (compras a precio habitual, sin curación ni botín). Cada escenario
+tiene lugares con nombres propios. Elegir un camino excluye los demás y se
+guarda antes de aplicarse; si la escritura falla, no se consume la decisión.
+Volver o Esc en la selección de escenario cancela sin cambios. Una vez dentro,
+puedes guardar y salir al menú, pero no cambiar de escenario.
+
+| Escenario | Ventaja inicial | Perjuicio inicial |
+|---|---|---|
+| Bosque de las Ánimas | Lobos: +2 Furia | Fantasmas: rival con +4 Bloqueo |
+| Cementerio de San Telmo | Fantasmas: +2 Ectoplasma | Humanos: rival con +4 Bloqueo |
+| Castillo de Montenegro | Vampiros: +1 Ímpetu solo en el primer turno | Lobos: rival con +4 Bloqueo |
+
+Las demás combinaciones son neutrales. Los efectos se suman a las reliquias,
+se aplican una sola vez al iniciar el encuentro y no afectan al jefe ni la arena.
+Cada rival tiene 44 Salud, patrón propio y recompensa de 25 monedas más la
+elección habitual de carta. Después se continúa al descanso.
+Los caminos se presentan mediante botones; los mapas ilustrados siguen pendientes.
+
+El guardado 7 conserva el desvío y camino junto con ciudad, moneda, reliquias
+y mejoras. Se siguen cargando las versiones 1–6; las del formato 6 conservan
+el combate que ya habían elegido, sin reabrir la elección de camino.
+Cerrar un combate reinicia ese encuentro.
+Pruebas: `godot --headless --path . --script res://tests/biome_tests.gd`.
+Pruebas de caminos: `godot --headless --path . --script res://tests/biome_path_tests.gd`.
 
 ### Moneda, mercader y reliquias
 
@@ -332,6 +423,17 @@ El balance de estos patrones es provisional; las pruebas verifican sus reglas,
 no garantizan una dificultad equilibrada para todas las facciones.
 
 ## Pruebas de regresión
+
+Para ejecutar todas las suites en Windows, con límite de tiempo por prueba y
+registros separados en `.godot/test-runs/`:
+
+```powershell
+.\tools\test_all.ps1 -GodotPath 'C:\Program Files\Godot\Godot_v4.7.2-stable_win64_console.exe'
+```
+
+También admite `-GodotPath godot` si está en PATH. Devuelve salida 1 si falla
+alguna suite o supera 45 segundos (ajustable con `-TimeoutSeconds`). Los tests
+usan guardados temporales en `.godot`, no la expedición personal de `user://`.
 
 Con Godot accesible en consola:
 

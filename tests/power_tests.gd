@@ -36,7 +36,17 @@ func run() -> void:
 			for card in pile:
 				check(card.id != id, "Poder fuera de pilas " + id)
 		game._show_deck("Poderes")
-		check(game.get_node("DeckOverlay").find_children("*", "Button", true, false).size() == 2, "Visor muestra poder y cierre")
+		var overlay = game.get_node("DeckOverlay")
+		var cards: Array = overlay.find_children("*", "Button", true, false).filter(func(button): return button is CardView)
+		check(cards.size() == 1 and cards[0].card_data.id == id, "Visor muestra el poder correcto")
+		var close_buttons: Array = overlay.find_children("*", "Button", true, false).filter(func(button): return button.text == "VOLVER AL COMBATE")
+		check(close_buttons.size() == 1, "Visor permite volver al combate")
+		var before := JSON.stringify([game.active_powers, game.energy, game.hand])
+		cards[0].find_child("InspectCard", true, false).pressed.emit()
+		check(root.has_node("CardDetail"), "Poder permite ampliar ilustración y reglas")
+		root.get_node("CardDetail").confirmed.emit()
+		await process_frame
+		check(before == JSON.stringify([game.active_powers, game.energy, game.hand]), "Consultar poder no vuelve a activarlo")
 		game.run_deck.append(id)
 		game.start_battle(faction)
 		check(game.active_powers.is_empty() and game.hand.size() + game.draw_pile.size() == 11, "Poder vuelve al mazo y reinicia")

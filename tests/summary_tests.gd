@@ -35,6 +35,7 @@ func run() -> void:
 	var summary = game.hand_box.get_node("CombatSummary")
 	check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(summary.get_global_rect()), "Resumen dentro de pantalla")
 	check(summary.text == game._combat_summary_text() and "RESUMEN DEL COMBATE" in game.combat_log.back(), "Resumen visible y copiable en historial")
+	check("atacar" not in game.intent_label.tooltip_text and "Combate terminado" in game.intent_label.tooltip_text, "Ayuda no anuncia ataques tras victoria")
 	var count: int = game.combat_log.size()
 	game._finish_battle(true)
 	check(game.combat_log.size() == count, "Finalización no duplica resumen")
@@ -45,6 +46,7 @@ func run() -> void:
 	game._end_turn()
 	check(game.combat_stats.blocked == 2 and game.combat_stats.received == 4 and game.player_hp == 0, "Derrota limita pérdida a Salud restante y detiene segundo golpe")
 	check(game.screen == "lost" and game.hand_box.has_node("CombatSummary"), "Resumen también tras derrota")
+	check("Combate terminado" in game.intent_label.tooltip_text, "Ayuda actualizada tras derrota")
 	battle("Fantasmas")
 	game.faction_resource = 8
 	game.enemy_intent_damage = 8

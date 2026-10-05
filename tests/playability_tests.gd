@@ -50,6 +50,8 @@ func run() -> void:
 	await process_frame
 	var view = game.hand_box.get_child(0)
 	check(view.disabled and "NO DISPONIBLE" in view.tooltip_text and "Ya tienes Etéreo" in view.tooltip_text, "Carta muestra motivo en tooltip")
+	check(view.find_child("CardFooter", true, false).text == "NO DISPONIBLE", "Bloqueo visible sin depender del color")
+	check(not view.find_child("InspectCard", true, false).disabled, "Consulta disponible aunque no se pueda jugar")
 	check("SIN CARTAS JUGABLES" in game.end_turn_button.text, "Fin de turno indica bloqueo")
 	var hp: int = game.player_hp
 	game._play_card(game.hand[0])
@@ -59,6 +61,13 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	check(not game.hand_box.get_child(0).disabled and "NO DISPONIBLE" not in game.hand_box.get_child(0).tooltip_text, "Motivo desaparece al desbloquear")
+	check(game.hand_box.get_child(0).find_child("CardFooter", true, false).text == "JUGABLE", "Indicador actualizado al desbloquear")
+	var reusable = game.hand_box.get_child(0)
+	reusable.set_play_availability("Prueba de bloqueo")
+	reusable.set_play_availability("Prueba de bloqueo")
+	check(reusable.tooltip_text.count("Prueba de bloqueo") == 1, "No duplica motivos al actualizar")
+	reusable.set_play_availability("")
+	check("Prueba de bloqueo" not in reusable.tooltip_text, "Limpia motivo antiguo")
 	check(game.end_turn_button.text == "TERMINAR TURNO", "Botón se restaura")
 	game.active_powers.append("L003")
 	game.pack_played = false

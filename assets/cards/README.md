@@ -1,26 +1,34 @@
 # Ilustraciones de cartas
 
-Godot busca automáticamente una ilustración cuyo nombre coincida con el identificador de la carta.
+Las 40 cartas del prototipo tienen ilustración, incluidas sus mejoras.
+Las copias se nombran con identificador y nombre sin tildes, por ejemplo:
+`assets/cards/humanos/H001_balas_de_plata.png`.
 
-## Estructura
+`src/card_art.gd` asocia cada identificador a su archivo. No renombrar las
+copias sin actualizar ese registro. Sigue siendo compatible con archivos
+nombrados solo por ID (`H001.webp`, `.png`, `.jpg`, `.jpeg`) como alternativa.
 
-```text
-assets/cards/
-├── humanos/H001.webp
-├── hombres_lobo/L001.webp
-├── vampiros/V001.webp
-└── fantasmas/F001.webp
-```
+Los originales de `assets/art_originals/` se conservan intactos. Sus subcarpetas
+no se incluyen en Git y `.gdignore` evita importarlos o exportarlos por duplicado.
+Las copias de `assets/cards/` sí deben acompañar al código al sincronizar.
+Mantén una copia de seguridad separada de los originales.
 
-También se aceptan temporalmente `.png`, `.jpg` y `.jpeg`. Para la versión del juego se recomienda WebP optimizado.
+Los PNG se copian sin recomprimir, redimensionar ni recortar (unos 97 MB).
+Todas las imágenes son 3:4; 38 miden 1086 × 1448 y dos 864 × 1152.
+El marco, nombre, coste y reglas los dibuja Godot. La ilustración se muestra
+completa y centrada, conservando su proporción.
+En la mano, el área de ilustración mide 180 píxeles de alto. El coste actual
+aparece en la esquina superior izquierda; el daño o Bloqueo base (incluidas
+las mejoras), en la derecha. Las cartas sin esos valores muestran «EFECTO».
+Debajo aparecen el nombre y las reglas; los textos largos se consultan con VER.
+El texto inferior omite frases iniciales de daño o Bloqueo simple cuando la
+cifra ya está en el indicador. Conserva condiciones, ataques múltiples y
+efectos compuestos; la ayuda y VER mantienen siempre la descripción completa.
+El botón **VER** o el clic derecho abre una ventana de consulta con la imagen
+ampliada y las reglas completas. Cerrar o Esc no modifica la partida.
 
-## Preparación
+`tools/install_card_art.ps1` comprueba que exista exactamente un PNG por ID,
+crea las copias y verifica sus hashes. No sobrescribe destinos distintos.
+Para sustituir una ilustración existente, revisar primero ambas versiones.
 
-- Proporción vertical 3:4.
-- Resolución maestra recomendada: 1728 × 2304 px.
-- No incorporar nombre, coste, marco ni reglas en la imagen.
-- Mantener el sujeto principal dentro del 80 % central para permitir recortes.
-- Conservar los originales de alta resolución fuera del repositorio.
-
-El marco, el coste, el nombre, el tipo, la rareza y el texto los genera Godot.
-
+Pruebas: `godot --headless --path . --script res://tests/art_tests.gd`.

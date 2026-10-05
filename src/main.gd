@@ -5,9 +5,19 @@ const CardViewScene = preload("res://src/card_view.gd")
 const RouteEvents = preload("res://src/route_events.gd")
 const CardUpgrades = preload("res://src/card_upgrades.gd")
 const Relics = preload("res://src/relics.gd")
+const Biomes = preload("res://src/biomes.gd")
+var biome := ""
+var biome_path := ""
 var coins := 0
 var relics: Array[String] = []
 var elite_encounter := false
+var city_path := ""
+var arena: Dictionary = {}
+const ARENA_WAVES := [
+	{"name": "EL ASPIRANTE SIN SOMBRA", "hp": 24, "coins": 10, "pattern": [{"damage": 5}, {"block": 5}, {"damage": 8}]},
+	{"name": "EL DUELISTA DEL UMBRAL", "hp": 36, "coins": 15, "pattern": [{"damage": 5, "hits": 2}, {"block": 7}, {"damage": 12}]},
+	{"name": "LA CAMPEONA VACÍA", "hp": 50, "coins": 25, "pattern": [{"damage": 7, "hits": 2}, {"block": 9, "weak": 1}, {"damage": 17}]}
+]
 const ELITE := {"name": "EL REVISOR DE CENIZA", "hp": 56, "coins": 45}
 const ELITE_PATTERN := [{"damage": 6, "hits": 2}, {"block": 8, "weak": 1}, {"damage": 16}]
 var save_store = preload("res://src/run_save.gd").new()
@@ -113,7 +123,10 @@ var combat_stats: Dictionary = {}
 
 var player_status: Label
 var enemy_status: Label
+var player_health: ProgressBar
+var enemy_health: ProgressBar
 var intent_label: Label
+var intent_details_button: Button
 var message_label: Label
 var pile_buttons: Dictionary = {}
 var hand_box: HBoxContainer
@@ -181,6 +194,11 @@ func _make_button(text_value: String, font_size := 18) -> Button:
 	button.focus_mode = Control.FOCUS_ALL
 	return button
 
+func _make_scroll() -> ScrollContainer:
+	var scroll := ScrollContainer.new()
+	scroll.follow_focus = true
+	return scroll
+
 func show_title_screen() -> void:
 	screen = "title"
 	_clear_screen()
@@ -242,8 +260,15 @@ func _checkpoint(state: String) -> void:
 		version = 3
 	if elite_encounter:
 		version = 4
+	if not city_path.is_empty():
+		version = 5
+	if not biome.is_empty():
+		version = 6
+	if not biome_path.is_empty():
+		version = 7
 	save_failed = not save_store.write({"version": version, "state": state, "faction": selected_faction,
-		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck, "coins": coins, "relics": relics, "elite": elite_encounter})
+		"stage": stage, "hp": maxi(0, player_hp), "deck": run_deck, "coins": coins, "relics": relics, "elite": elite_encounter,
+		"city_path": city_path, "arena": arena, "biome": biome, "biome_path": biome_path})
 	if save_failed:
 		var warning := _make_label("No se pudo guardar. " + save_store.last_error, 16, Color("ee6b7a"))
 		warning.position = Vector2(12, 2)
@@ -257,7 +282,11 @@ func _resume_run() -> void:
 	selected_faction = saved.faction
 	coins = int(saved.get("coins", 0)) if saved.version >= 3 else 0
 	relics.assign(saved.get("relics", []) if saved.version >= 3 else [])
-	elite_encounter = saved.get("elite", false) if saved.version == 4 else false
+	elite_encounter = saved.get("elite", false) if saved.version >= 4 else false
+	city_path = saved.get("city_path", "") if saved.version >= 5 else ""
+	arena = saved.get("arena", {}).duplicate(true) if saved.version >= 5 else {}
+	biome = saved.get("biome", "") if saved.version >= 6 else ""
+	biome_path = saved.get("biome_path", "") if saved.version >= 7 else ""
 	run_deck.assign(saved.deck)
 	player_hp = int(saved.hp)
 	stage = int(saved.stage)
@@ -343,7 +372,7 @@ func _show_deck(pile_name := "", remove_at_camp := false, upgrade_at_camp := fal
 		box.add_child(summary)
 	if display_cards.is_empty():
 		box.add_child(_make_label("No hay cartas en esta pila.", 20))
-	var scroll := ScrollContainer.new()
+	var scroll := _make_scroll()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(scroll)
 	var grid := GridContainer.new()
@@ -500,7 +529,7 @@ func _show_catalog() -> void:
 	var count := _make_label("", 16)
 	count.name = "CardCount"
 	box.add_child(count)
-	var scroll := ScrollContainer.new()
+	var scroll := _make_scroll()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
@@ -578,10 +607,12 @@ func _show_rules() -> void:
 	add_child(preload("res://src/rules_guide.gd").new())
 
 func _request_menu() -> void:
+	if has_node("IntentDetails"):
+		return
 	if has_node("RulesOverlay") or choosing_card or has_node("MenuConfirmation") or has_node("DeckOverlay") or has_node("CatalogOverlay"):
 		return
-	if screen in ["route", "reward"]:
-		_checkpoint(screen)
+	if screen in ["route", "reward", "city", "arena", "biome"]:
+		_checkpoint("reward" if screen == "reward" else "route")
 		if not save_failed:
 			show_title_screen()
 		return
@@ -608,7 +639,9 @@ func _request_menu() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not event.is_echo():
-		if has_node("RemovalConfirmation"):
+		if has_node("IntentDetails"):
+			get_node("IntentDetails").close()
+		elif has_node("RemovalConfirmation"):
 			get_node("RemovalConfirmation").queue_free()
 		elif has_node("NewRunConfirmation"):
 			get_node("NewRunConfirmation").queue_free()
@@ -622,7 +655,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			show_route()
 		elif screen == "faction":
 			show_title_screen()
-		elif screen in ["battle", "route", "reward"]:
+		elif screen in ["battle", "route", "reward", "city", "arena", "biome"]:
 			_request_menu()
 		get_viewport().set_input_as_handled()
 
@@ -716,6 +749,10 @@ func _request_start_run(faction: String) -> void:
 	dialog.get_cancel_button().grab_focus()
 
 func start_run(faction: String) -> void:
+	biome_path = ""
+	biome = ""
+	city_path = ""
+	arena.clear()
 	elite_encounter = false
 	coins = 0
 	relics.clear()
@@ -746,10 +783,22 @@ func _journey_status() -> String:
 
 func show_route() -> void:
 	screen = "route"
+	if stage == 2 and biome_path in ["pending", "merchant"]:
+		_show_biome_paths()
+		return
+	if stage == 1 and not city_path.is_empty():
+		if city_path == "arena":
+			_show_arena()
+		else:
+			_show_city()
+		return
+	screen = "route"
 	var box := _journey_panel("EL CAMINO A SANTA VIGILIA", "Aldea → Sendero, refugio o ermita → Estación → Descanso → Monasterio")
 	var labels := ["Aldea: enfrentarse al Desvelado", "Sendero: combatir al Acechador", "Estación: combatir al Guardagujas", "Descansar junto al fuego (+15 Salud)", "Monasterio: enfrentarse al Custodio"]
 	if elite_encounter:
 		labels[2] = "Estación: desafío aceptado · Revisor de Ceniza"
+	elif not biome.is_empty():
+		labels[2] = "Desvío: " + str(Biomes.AREAS[biome].title)
 	for index in labels.size():
 		var button := _make_button(("✓ " if index < stage else "") + str(labels[index]))
 		button.disabled = index != stage
@@ -777,11 +826,21 @@ func show_route() -> void:
 		event_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		event_button.pressed.connect(_show_hermitage)
 		alternatives.add_child(event_button)
-	if stage == 2 and not elite_encounter:
-		var challenge := _make_button("DESAFÍO OPCIONAL · Revisor de Ceniza · 56 Salud · 45 monedas", 17)
+		var city := _make_button("CIUDAD: elegir camino", 16)
+		city.name = "CityButton"
+		city.pressed.connect(_show_city)
+		alternatives.add_child(city)
+	if stage == 2 and not elite_encounter and biome.is_empty():
+		var choices := HBoxContainer.new()
+		box.add_child(choices)
+		var challenge := _make_button("DESAFÍO · Revisor · 56 Salud · 45 monedas", 17)
 		challenge.name = "EliteChallengeButton"
 		challenge.pressed.connect(_show_encounter_briefing.bind(true))
-		box.add_child(challenge)
+		choices.add_child(challenge)
+		var explore := _make_button("BOSQUE · CEMENTERIO · CASTILLO", 17)
+		explore.name = "BiomesButton"
+		explore.pressed.connect(_show_biomes)
+		choices.add_child(explore)
 	if stage == 3:
 		var camp_choices := HBoxContainer.new()
 		box.add_child(camp_choices)
@@ -818,10 +877,156 @@ func show_route() -> void:
 	_checkpoint("route")
 	_add_save_status(box)
 
-func _show_relics() -> void:
-	if screen not in ["route", "battle", "won", "lost"] or choosing_card or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+func _relic_price(item: Dictionary) -> int:
+	# The city discount does not apply to the travelling merchant or final camp.
+	return int(item.price) - (5 if stage == 1 and city_path == "merchant" and selected_faction == "Humanos" else 0)
+
+func _show_city() -> void:
+	if stage != 1 or screen not in ["route", "city"] or has_node("DeckOverlay"):
 		return
-	var shop := screen == "route" and stage in [1, 3]
+	screen = "city"
+	var box := _journey_panel("CIUDAD · LAS PUERTAS DE VALDEGRÍS", "Elige un camino. Al confirmarlo renuncias a los demás y al sendero.")
+	box.add_child(_make_label("Humanos: −5 Reales por reliquia en el mercado urbano.\nLas otras estirpes pagan el precio habitual. Sin penalizaciones adicionales por ahora.", 18))
+	if city_path.is_empty():
+		for choice in ["merchant", "refuge", "arena"]:
+			var labels := {"merchant": "MERCADO · comprar reliquias, sin curación ni carta", "refuge": "REFUGIO · recuperar 12 Salud, sin compras ni carta", "arena": "ARENA DEL UMBRAL · hasta 3 oleadas · premios: 10 / 15 / 25 monedas"}
+			var button := _make_button(labels[choice])
+			button.name = "CityChoice_" + choice
+			button.custom_minimum_size.y = 52
+			button.pressed.connect(_choose_city_path.bind(choice))
+			box.add_child(button)
+		box.add_child(_make_label("Arena: Salud compartida entre oleadas. Retirada entre combates.\nAl caer o salir recuperas la Salud de entrada y conservas el botín.\nNo entrega cartas. Una visita por expedición. La elección se guarda antes de entrar.", 18))
+		var back := _make_button("VOLVER AL CRUCE SIN ELEGIR")
+		back.pressed.connect(show_route)
+		box.add_child(back)
+	else:
+		var shop := _make_button("ABRIR MERCADO")
+		shop.pressed.connect(_show_relics)
+		box.add_child(shop)
+		var leave := _make_button("DEJAR LA CIUDAD · CONTINUAR A LA ESTACIÓN")
+		leave.pressed.connect(_leave_city)
+		box.add_child(leave)
+		var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
+		menu.pressed.connect(_request_menu)
+		box.add_child(menu)
+
+func _choose_city_path(choice: String) -> void:
+	if screen != "city" or stage != 1 or not city_path.is_empty() or choice not in ["merchant", "refuge", "arena"] or has_node("DeckOverlay"):
+		return
+	var previous_hp := player_hp
+	city_path = choice
+	if choice == "refuge":
+		player_hp = mini(MAX_HP, player_hp + 12)
+		stage = 2
+	elif choice == "arena":
+		arena = {"entry_hp": player_hp, "wave": 1}
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		city_path = ""
+		arena.clear()
+		player_hp = previous_hp
+		stage = 1
+		return
+	show_route()
+
+func _leave_city() -> void:
+	if screen != "city" or stage != 1 or city_path != "merchant" or has_node("DeckOverlay"):
+		return
+	stage = 2
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		stage = 1
+		return
+	show_route()
+
+func _show_arena() -> void:
+	if arena.is_empty() or stage != 1:
+		return
+	screen = "arena"
+	var wave: Dictionary = ARENA_WAVES[int(arena.wave) - 1]
+	var box := _journey_panel("ARENA DEL UMBRAL · OLEADA %d/3" % int(arena.wave), "Salud al salir: %d · Las monedas de oleadas vencidas ya son tuyas." % int(arena.entry_hp))
+	box.add_child(_make_label("%s · %d Salud · Premio: %d %s" % [wave.name, wave.hp, wave.coins, Relics.CURRENCIES[selected_faction]], 22))
+	var actions: Array[String] = []
+	for action in wave.pattern:
+		var parts: Array[String] = []
+		if action.has("damage"):
+			parts.append("ataque %d × %d" % [action.damage, action.get("hits", 1)])
+		if action.has("block"):
+			parts.append("%d Bloqueo" % action.block)
+		if action.has("weak"):
+			parts.append("%d Débil" % action.weak)
+		actions.append(" + ".join(parts))
+	box.add_child(_make_label("Secuencia repetida: " + " → ".join(actions), 18))
+	box.add_child(_make_label("La Salud actual pasa a la siguiente oleada; cartas y estados de combate se reinician.\nCerrar durante un combate reinicia esa oleada, no las ya superadas.", 18))
+	var fight := _make_button("COMBATIR EN LA ARENA")
+	fight.name = "ArenaFight"
+	fight.pressed.connect(_start_arena_wave)
+	box.add_child(fight)
+	var leave := _make_button("RETIRARSE · RECUPERAR LA SALUD DE ENTRADA")
+	leave.name = "ArenaLeave"
+	leave.pressed.connect(_leave_arena)
+	box.add_child(leave)
+	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
+	menu.pressed.connect(_request_menu)
+	box.add_child(menu)
+	_checkpoint("route")
+	_add_save_status(box)
+
+func _start_arena_wave() -> void:
+	if screen != "arena" or arena.is_empty() or has_node("DeckOverlay") or has_node("RulesOverlay"):
+		return
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		return
+	var wave: Dictionary = ARENA_WAVES[int(arena.wave) - 1]
+	encounter_name = wave.name
+	enemy_max_hp = int(wave.hp)
+	start_battle(selected_faction)
+
+func _finish_arena_wave(victory: bool) -> void:
+	battle_over = true
+	if victory:
+		coins += int(ARENA_WAVES[int(arena.wave) - 1].coins)
+		_heal_health(Relics.bonus(relics, "heal"))
+		if int(arena.wave) < ARENA_WAVES.size():
+			arena.wave = int(arena.wave) + 1
+			_show_arena()
+			return
+	# Defeat is only the end of this supernatural trial, never the expedition.
+	screen = "arena"
+	_leave_arena()
+
+func _leave_arena() -> void:
+	if screen != "arena" or arena.is_empty() or has_node("DeckOverlay") or has_node("RulesOverlay"):
+		return
+	player_hp = int(arena.entry_hp)
+	arena.clear()
+	stage = 2
+	# Battle-local state must not leak into route consultations or the next fight.
+	hand.clear()
+	draw_pile.clear()
+	discard_pile.clear()
+	exhaust_pile.clear()
+	active_powers.clear()
+	power_cards.clear()
+	allies.clear()
+	player_block = 0
+	faction_resource = 0
+	consecrated = 0
+	player_weak = 0
+	player_ethereal = false
+	possession_active = false
+	barricade_active = false
+	temporary_strength = 0
+	show_route()
+	var notice := _make_label("Arena terminada · Salud de entrada restaurada · Conservas las monedas ganadas.", 16, Color("79d98c"))
+	notice.position = Vector2(12, 28)
+	add_child(notice)
+
+func _show_relics() -> void:
+	if screen not in ["route", "battle", "won", "lost", "city", "biome"] or choosing_card or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+		return
+	var shop := _can_shop()
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
 	overlay.set_meta("relic_shop", shop)
@@ -836,10 +1041,10 @@ func _show_relics() -> void:
 	margin.add_child(box)
 	box.add_child(_make_label("MERCADER DE VALDEGRÍS" if shop else "RELIQUIAS DE LA EXPEDICIÓN", 30, Color("d8bd79")))
 	box.add_child(_make_label("%s: %d · Reliquias: %d/3" % [Relics.CURRENCIES[selected_faction], coins, relics.size()], 22))
-	var explanation := _make_label("Efectos pasivos, sin cartas ni coste de Ímpetu. Cada compra es definitiva y se guarda al instante. Solo duran esta expedición.\nEl mercader vende en el cruce y en el descanso antes del jefe; comprar no consume el descanso.", 17)
+	var explanation := _make_label("Efectos pasivos, sin cartas ni coste de Ímpetu. Cada compra es definitiva y se guarda al instante. Solo duran esta expedición.\nTambién hay mercaderes en los caminos elegidos de ciudad, bosque, cementerio y castillo. Comprar no consume el descanso posterior.", 17)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(explanation)
-	var scroll := ScrollContainer.new()
+	var scroll := _make_scroll()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(scroll)
 	var list := VBoxContainer.new()
@@ -850,15 +1055,16 @@ func _show_relics() -> void:
 		var item: Dictionary = Relics.ITEMS[id]
 		if item.faction != selected_faction:
 			continue
-		var description := _make_label("%s · %d %s\n%s" % [item.name, item.price, Relics.CURRENCIES[selected_faction], item.text], 20)
+		var price := _relic_price(item)
+		var description := _make_label("%s · %d %s\n%s" % [item.name, price, Relics.CURRENCIES[selected_faction], item.text], 20)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		list.add_child(description)
 		var buy := _make_button("ADQUIRIDA" if id in relics else ("COMPRAR" if shop else "Disponible en el mercader"), 18)
 		buy.name = "Buy_" + id
-		buy.disabled = not shop or id in relics or coins < int(item.price)
-		buy.tooltip_text = "No permite duplicados." if id in relics else "Precio: %d. Saldo restante: %d." % [item.price, coins - int(item.price)]
-		if coins < int(item.price) and id not in relics:
-			buy.tooltip_text = "Te faltan %d %s." % [int(item.price) - coins, Relics.CURRENCIES[selected_faction]]
+		buy.disabled = not shop or id in relics or coins < price
+		buy.tooltip_text = "No permite duplicados." if id in relics else "Precio: %d. Saldo restante: %d." % [price, coins - price]
+		if coins < price and id not in relics:
+			buy.tooltip_text = "Te faltan %d %s." % [price - coins, Relics.CURRENCIES[selected_faction]]
 		buy.pressed.connect(_buy_relic.bind(str(id)))
 		list.add_child(buy)
 	if save_failed:
@@ -871,18 +1077,19 @@ func _show_relics() -> void:
 	close.grab_focus()
 
 func _buy_relic(id: String) -> void:
-	if screen != "route" or stage not in [1, 3] or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("relic_shop", false):
+	if not _can_shop() or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("relic_shop", false):
 		return
 	if not Relics.ITEMS.has(id) or id in relics:
 		return
 	var item: Dictionary = Relics.ITEMS[id]
-	if item.faction != selected_faction or coins < int(item.price):
+	var price := _relic_price(item)
+	if item.faction != selected_faction or coins < price:
 		return
-	coins -= int(item.price)
+	coins -= price
 	relics.append(id)
 	_checkpoint("route")
 	if persistence_enabled and save_failed:
-		coins += int(item.price)
+		coins += price
 		relics.erase(id)
 	var old := get_node("DeckOverlay")
 	remove_child(old)
@@ -892,13 +1099,158 @@ func _buy_relic(id: String) -> void:
 		status.text = _journey_status()
 	_show_relics()
 
+func _can_shop() -> bool:
+	return (screen == "route" and stage in [1, 3]) or (screen == "city" and city_path == "merchant" and stage == 1) or (screen == "biome" and stage == 2 and biome_path == "merchant")
+
+func _show_biome_paths() -> void:
+	if stage != 2 or biome.is_empty() or biome_path not in ["pending", "merchant"]:
+		return
+	screen = "biome"
+	var box := _journey_panel(str(Biomes.AREAS[biome].title), "Entrada → un camino a elegir → descanso antes del monasterio")
+	var info := _make_label(Biomes.preview(biome, selected_faction), 18)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(info)
+	box.add_child(_make_label("Los efectos de terreno solo se aplican al combate. No puedes cambiar de escenario.\nElegir un camino renuncia a los demás; el descanso posterior sigue disponible.", 17))
+	if biome_path == "pending":
+		var names: Dictionary = {
+			"forest": ["Senda del Montero", "Claro del Roble", "Carromato del buhonero"],
+			"cemetery": ["Cripta de la Sepulturera", "Capilla del Silencio", "Puesto del sepulturero"],
+			"castle": ["Salón del Mayordomo", "Aposento de huéspedes", "Gabinete del anticuario"]
+		}
+		var choices := ["combat", "refuge", "merchant"]
+		var details := ["COMBATE · 25 monedas y carta opcional", "REFUGIO · +12 Salud, sin botín ni carta", "MERCADER · comprar reliquias, sin curación ni botín"]
+		for index in choices.size():
+			var button := _make_button(str(names[biome][index]) + " · " + details[index], 17)
+			button.name = "BiomePath_" + choices[index]
+			button.custom_minimum_size.y = 48
+			button.pressed.connect(_choose_biome_path.bind(choices[index]))
+			box.add_child(button)
+	else:
+		var shop := _make_button("ABRIR MERCADER · PRECIOS HABITUALES")
+		shop.pressed.connect(_show_relics)
+		box.add_child(shop)
+		var leave := _make_button("CONTINUAR AL DESCANSO")
+		leave.pressed.connect(_leave_biome_shop)
+		box.add_child(leave)
+	var menu := _make_button("GUARDAR Y VOLVER AL MENÚ")
+	menu.pressed.connect(_request_menu)
+	box.add_child(menu)
+
+func _choose_biome_path(choice: String) -> void:
+	if screen != "biome" or stage != 2 or biome_path != "pending" or choice not in ["combat", "refuge", "merchant"] or has_node("DeckOverlay") or has_node("RulesOverlay"):
+		return
+	var previous_hp := player_hp
+	biome_path = choice
+	if choice == "refuge":
+		player_hp = mini(MAX_HP, player_hp + 12)
+		stage = 3
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		biome_path = "pending"
+		player_hp = previous_hp
+		stage = 2
+		return
+	show_route()
+	if choice == "combat":
+		_enter_stage()
+
+func _leave_biome_shop() -> void:
+	if screen != "biome" or stage != 2 or biome_path != "merchant" or has_node("DeckOverlay"):
+		return
+	stage = 3
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		stage = 2
+		return
+	show_route()
+
+func _show_biomes() -> void:
+	if screen != "route" or stage != 2 or elite_encounter or not biome.is_empty() or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
+		return
+	var overlay := PanelContainer.new()
+	overlay.name = "DeckOverlay"
+	overlay.set_meta("biome_choice", true)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 28)
+	overlay.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+	box.add_child(_make_label("DESVÍOS HACIA SANTA VIGILIA", 28, Color("d8bd79")))
+	var notice := _make_label("Entrar guarda el escenario y sustituye a la estación y al Revisor.\nDentro elegirás combate, refugio o mercader. Después continúas al descanso habitual.", 17)
+	notice.name = "BiomeNotice"
+	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(notice)
+	var scroll := _make_scroll()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 12)
+	scroll.add_child(list)
+	for id in Biomes.AREAS:
+		var info := _make_label(Biomes.preview(id, selected_faction), 18)
+		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		list.add_child(info)
+		var choose := _make_button("ENTRAR EN " + str(Biomes.AREAS[id].title) + " · ELEGIR CAMINO", 18)
+		choose.name = "ChooseBiome_" + id
+		choose.custom_minimum_size.y = 46
+		choose.pressed.connect(_choose_biome.bind(str(id), true))
+		list.add_child(choose)
+	var back := _make_button("VOLVER SIN ELEGIR · ESC")
+	back.name = "CloseBiomes"
+	back.pressed.connect(overlay.queue_free)
+	box.add_child(back)
+	back.grab_focus()
+
+func _choose_biome(id: String, explore := false) -> void:
+	if screen != "route" or stage != 2 or elite_encounter or not biome.is_empty() or not Biomes.AREAS.has(id) or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("biome_choice", false):
+		return
+	biome = id
+	biome_path = "pending" if explore else ""
+	_checkpoint("route")
+	if persistence_enabled and save_failed:
+		biome = ""
+		biome_path = ""
+		get_node("DeckOverlay").find_child("BiomeNotice", true, false).text = "No se pudo guardar el desvío. No ha comenzado el combate; puedes reintentar o volver."
+		return
+	var overlay := get_node("DeckOverlay")
+	remove_child(overlay)
+	overlay.queue_free()
+	if explore:
+		show_route()
+	else:
+		_enter_stage()
+
+func _apply_biome_effect() -> void:
+	if stage != 2 or biome.is_empty():
+		return
+	var area: Dictionary = Biomes.AREAS[biome]
+	if selected_faction == area.favored:
+		if biome in ["forest", "cemetery"]:
+			faction_resource += 2
+		else:
+			energy += 1
+	elif selected_faction == area.hindered:
+		enemy_block += 4
+	_log_combat(str(area.title) + " · " + Biomes.effect_text(biome, selected_faction))
+
 func _battle_pattern() -> Array:
+	if not arena.is_empty():
+		return ARENA_WAVES[int(arena.wave) - 1].pattern
+	if stage == 2 and not biome.is_empty():
+		return Biomes.AREAS[biome].pattern
 	return ELITE_PATTERN if elite_encounter and stage == 2 else ENEMY_PATTERNS.get(stage, ENEMY_PATTERNS[0])
 
 func _victory_coins() -> int:
 	return int(ELITE.coins) if elite_encounter and stage == 2 else int(Relics.REWARDS.get(stage, 0))
 
 func _encounter_briefing_text(encounter_stage: int, elite_preview := false) -> String:
+	if encounter_stage == 2 and not biome.is_empty():
+		return str(Biomes.AREAS[biome].title) + "\n\n" + Biomes.preview(biome, selected_faction) + "\n\nLos efectos de terreno se aplican una vez al comenzar el combate y se suman a las reliquias. Los daños indicados son por golpe, antes de Bloqueo y estados."
 	if not ENCOUNTERS.has(encounter_stage):
 		return ""
 	var is_elite := encounter_stage == 2 and (elite_preview or elite_encounter)
@@ -926,7 +1278,7 @@ func _encounter_briefing_text(encounter_stage: int, elite_preview := false) -> S
 func _show_encounter_briefing(elite_preview := false) -> void:
 	if screen != "route" or not ENCOUNTERS.has(stage) or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("CatalogOverlay"):
 		return
-	if elite_preview and (stage != 2 or elite_encounter):
+	if elite_preview and (stage != 2 or elite_encounter or not biome.is_empty()):
 		return
 	var overlay := PanelContainer.new()
 	overlay.name = "DeckOverlay"
@@ -966,6 +1318,8 @@ func _show_encounter_briefing(elite_preview := false) -> void:
 	back.grab_focus()
 
 func _accept_elite() -> void:
+	if not biome.is_empty():
+		return
 	if screen != "route" or stage != 2 or elite_encounter or not has_node("DeckOverlay") or not get_node("DeckOverlay").get_meta("elite_preview", false):
 		return
 	elite_encounter = true
@@ -1035,6 +1389,8 @@ func _enter_stage() -> void:
 		_rest(15)
 		return
 	var encounter: Dictionary = ELITE if elite_encounter and stage == 2 else ENCOUNTERS.get(stage, ENCOUNTERS[0])
+	if stage == 2 and not biome.is_empty():
+		encounter = Biomes.AREAS[biome]
 	encounter_name = encounter.name
 	enemy_max_hp = encounter.hp
 	start_battle(selected_faction)
@@ -1058,8 +1414,8 @@ func show_rewards() -> void:
 	box.add_child(deck_button)
 	if REWARDS[selected_faction].size() > 4:
 		box.add_child(_make_label("Desplaza la barra horizontal para ver todas las recompensas.", 16))
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.y = 310
+	var scroll := _make_scroll()
+	scroll.custom_minimum_size.y = 342
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
 	var row := HBoxContainer.new()
@@ -1167,11 +1523,11 @@ func _build_battle_screen() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 32)
 	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 22)
-	margin.add_theme_constant_override("margin_bottom", 22)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
 	add_child(margin)
 	battle_root = VBoxContainer.new()
-	battle_root.add_theme_constant_override("separation", 12)
+	battle_root.add_theme_constant_override("separation", 8)
 	margin.add_child(battle_root)
 
 	var header := HBoxContainer.new()
@@ -1205,12 +1561,17 @@ func _build_battle_screen() -> void:
 	battlefield.add_child(player_panel)
 	var player_box := VBoxContainer.new()
 	player_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	player_box.add_theme_constant_override("separation", 12)
+	player_box.add_theme_constant_override("separation", 4)
 	player_panel.add_child(player_box)
 	var protagonist := _make_label(_protagonist_name(), 29, FACTION_COLORS[selected_faction])
 	protagonist.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	player_box.add_child(protagonist)
+	player_health = preload("res://src/health_meter.gd").new()
+	player_health.name = "PlayerHealth"
+	player_box.add_child(player_health)
 	player_status = _make_label("", 19)
+	player_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	player_status.clip_text = true
 	player_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	player_box.add_child(player_status)
 
@@ -1219,20 +1580,43 @@ func _build_battle_screen() -> void:
 	battlefield.add_child(enemy_panel)
 	var enemy_box := VBoxContainer.new()
 	enemy_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	enemy_box.add_theme_constant_override("separation", 12)
+	enemy_box.add_theme_constant_override("separation", 4)
 	enemy_panel.add_child(enemy_box)
 	var enemy_name := _make_label(encounter_name, 29, Color("e3677e"))
 	enemy_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	enemy_box.add_child(enemy_name)
+	enemy_health = preload("res://src/health_meter.gd").new()
+	enemy_health.name = "EnemyHealth"
+	enemy_box.add_child(enemy_health)
 	enemy_status = _make_label("", 19)
+	enemy_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	enemy_status.clip_text = true
 	enemy_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	enemy_box.add_child(enemy_status)
 	intent_label = _make_label("", 18, Color("f0c36a"))
 	intent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	intent_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	enemy_box.add_child(intent_label)
+	intent_label.max_lines_visible = 2
+	intent_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var intent_row := HBoxContainer.new()
+	intent_row.add_theme_constant_override("separation", 8)
+	enemy_box.add_child(intent_row)
+	intent_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	intent_row.add_child(intent_label)
+	intent_details_button = _make_button("VER", 14)
+	intent_details_button.name = "InspectIntent"
+	intent_details_button.tooltip_text = "Consultar intención completa y previsión defensiva. No termina el turno."
+	intent_details_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	intent_details_button.pressed.connect(_show_intent_details)
+	intent_row.add_child(intent_details_button)
+	for panel in [player_panel, enemy_panel]:
+		var panel_style := panel.get_theme_stylebox("panel") as StyleBoxFlat
+		panel_style.content_margin_top = 10
+		panel_style.content_margin_bottom = 10
 
-	message_label = _make_label("", 17, Color("cbd2df"))
+	message_label = preload("res://src/combat_message.gd").new()
+	message_label.add_theme_font_size_override("font_size", 17)
+	message_label.add_theme_color_override("font_color", Color("cbd2df"))
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	battle_root.add_child(message_label)
 	var piles_row := HBoxContainer.new()
@@ -1251,8 +1635,8 @@ func _build_battle_screen() -> void:
 	history_button.pressed.connect(_show_history)
 	piles_row.add_child(history_button)
 
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 276)
+	var scroll := _make_scroll()
+	scroll.custom_minimum_size = Vector2(0, 320)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	battle_root.add_child(scroll)
@@ -1285,6 +1669,7 @@ func _begin_player_turn() -> void:
 	energy = MAX_ENERGY
 	last_attack_damage = 0
 	if turn == 1:
+		_apply_biome_effect()
 		player_block += Relics.bonus(relics, "block")
 		energy += Relics.bonus(relics, "energy")
 		consecrated += Relics.bonus(relics, "consecration")
@@ -1344,6 +1729,19 @@ func _enemy_intent_text() -> String:
 	if enemy_intent_ethereal:
 		parts.append("obtener Etéreo")
 	return "Intención: " + " · ".join(parts)
+
+func _defense_forecast() -> Dictionary:
+	return preload("res://src/attack_forecast.gd").calculate(
+		_enemy_hit_damage(), enemy_intent_hits, player_block, player_ethereal,
+		3 * allies.size() * _ally_count("H006"))
+
+func _show_intent_details() -> void:
+	if screen != "battle" or battle_over or choosing_card or has_node("IntentDetails") or has_node("DeckOverlay") or has_node("RulesOverlay") or has_node("MenuConfirmation") or get_tree().root.has_node("CardDetail"):
+		return
+	var dialog := preload("res://src/intent_details.gd").new()
+	dialog.name = "IntentDetails"
+	add_child(dialog)
+	dialog.show_details(_enemy_intent_text() + "\n\n" + preload("res://src/attack_forecast.gd").describe(_defense_forecast()))
 
 func _draw_to_hand(target_size: int) -> void:
 	while hand.size() < target_size:
@@ -1410,6 +1808,8 @@ func _play_block_reason(card: Dictionary) -> String:
 	return "\n".join(reasons)
 
 func _play_card(card: Dictionary) -> void:
+	if has_node("IntentDetails"):
+		return
 	if not hand.has(card):
 		message_label.text = "Esa carta ya no está en tu mano."
 		return
@@ -1555,7 +1955,7 @@ func _potency(amount: int, scale: float) -> int:
 
 func _resolve_attack_card(card: Dictionary, scale := 1.0) -> String:
 	var id: String = card.id
-	var damage: int = {"H001": 6, "H007": 7, "L001": 6, "L004": 5, "L005": 4, "L006": 4, "L008": 8, "V001": 6, "V005": 10, "V006": 8, "F004": 4, "F005": 7, "F009": 6}.get(id, int(card.get("damage", 0)))
+	var damage: int = preload("res://src/card_metrics.gd").DAMAGE.get(id, int(card.get("damage", 0)))
 	var hits: int = 3 if id == "L005" else int(card.get("hits", 1))
 	damage = int(card.get("attack_damage", damage))
 	if id == "L008" and not allies.is_empty():
@@ -1723,7 +2123,7 @@ func _enemy_action_card() -> Dictionary:
 		"mejora": "Sin mejora: carta enemiga.", "etiquetas": []}
 
 func _end_turn() -> void:
-	if battle_over or choosing_card:
+	if battle_over or choosing_card or has_node("IntentDetails"):
 		return
 	discard_pile.append_array(hand)
 	hand.clear()
@@ -1807,6 +2207,9 @@ func _resource_text() -> String:
 		_: return "Consagración %d" % consecrated
 
 func _card_art_path(card: Dictionary) -> String:
+	var named_path: String = preload("res://src/card_art.gd").PATHS.get(str(card["id"]).trim_suffix("+"), "")
+	if not named_path.is_empty() and ResourceLoader.exists(named_path):
+		return named_path
 	var faction_folder: String = str({
 		"Humanos": "humanos",
 		"Hombres Lobo": "hombres_lobo",
@@ -1823,6 +2226,8 @@ func _card_art_path(card: Dictionary) -> String:
 	return ""
 
 func _refresh_battle() -> void:
+	player_health.set_health(player_hp, MAX_HP)
+	enemy_health.set_health(enemy_hp, enemy_max_hp)
 	player_status.text = "♥ %d/%d     ◆ %d     ⚡ %d/%d\n%s" % [maxi(0, player_hp), MAX_HP, player_block, energy, MAX_ENERGY, _resource_text()]
 	if temporary_strength > 0:
 		player_status.text += " · Fuerza +%d" % temporary_strength
@@ -1841,6 +2246,7 @@ func _refresh_battle() -> void:
 		"Hombres Lobo": player_status.tooltip_text = "Furia 10: pierde 3 Salud, vuelve a 5 y gana +2 daño de ataque este turno. Si ocurre al recibir un ataque, dura tu próximo turno."
 		"Vampiros": player_status.tooltip_text = "Sed 8–10: pierde 2 Salud al terminar turno. Con 10, el siguiente turno tus ataques causan un 25 % menos de daño."
 		"Fantasmas": player_status.tooltip_text = "Ectoplasma se conserva entre turnos. Eco necesita 2 y un ataque previo este turno."
+	player_status.tooltip_text = player_status.text + "\n\n" + player_status.tooltip_text
 	var enemy_states: Array[String] = []
 	if enemy_weak > 0:
 		enemy_states.append("Débil %d" % enemy_weak)
@@ -1854,7 +2260,11 @@ func _refresh_battle() -> void:
 		enemy_states.append("Sangrado %d" % enemy_bleed)
 	var state_text := " · ".join(enemy_states) if not enemy_states.is_empty() else "Sin estados"
 	enemy_status.text = "♥ %d/%d     ◆ %d\n%s" % [enemy_hp, enemy_max_hp, enemy_block, state_text]
+	enemy_status.tooltip_text = enemy_status.text
 	intent_label.text = _enemy_intent_text()
+	intent_label.tooltip_text = intent_label.text + "\n\n" + preload("res://src/attack_forecast.gd").describe(_defense_forecast())
+	intent_label.mouse_default_cursor_shape = Control.CURSOR_HELP
+	intent_details_button.disabled = battle_over or choosing_card
 	var pile_counts := {"Robo": draw_pile.size(), "Descarte": discard_pile.size(), "Agotadas": exhaust_pile.size(), "Poderes": _active_power_ids().size(), "Aliados": allies.size()}
 	for pile_name in pile_counts:
 		pile_buttons[pile_name].text = "%s · %d" % [pile_name.to_upper(), pile_counts[pile_name]]
@@ -1867,10 +2277,8 @@ func _refresh_battle() -> void:
 		var button := CardViewScene.new() as CardView
 		button.setup(card, FACTION_COLORS[selected_faction], _card_art_path(card), _card_cost(card))
 		var blocked := _play_block_reason(card)
-		button.disabled = not blocked.is_empty()
-		if button.disabled:
-			button.tooltip_text = "NO DISPONIBLE\n" + blocked + "\n\n" + button.tooltip_text
-		else:
+		button.set_play_availability(blocked)
+		if not button.disabled:
 			playable_count += 1
 		button.pressed.connect(_play_card.bind(card))
 		hand_box.add_child(button)
@@ -1925,6 +2333,9 @@ func _combat_summary_text() -> String:
 func _finish_battle(victory: bool) -> void:
 	if battle_over:
 		return
+	if not arena.is_empty():
+		_finish_arena_wave(victory)
+		return
 	screen = "won" if victory else "lost"
 	battle_over = true
 	if victory:
@@ -1945,6 +2356,7 @@ func _finish_battle(victory: bool) -> void:
 	for connection in end_turn_button.pressed.get_connections():
 		end_turn_button.pressed.disconnect(connection["callable"])
 	intent_label.text = "Combate terminado"
+	intent_label.tooltip_text = "Combate terminado. El enemigo no ejecutará más acciones."
 	if victory and stage < 4:
 		_checkpoint("reward")
 		end_turn_button.text = "ELEGIR RECOMPENSA"

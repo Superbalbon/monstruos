@@ -41,7 +41,13 @@ func run() -> void:
 			var label = game.find_child("RewardOwned_" + reward_id, true, false)
 			check(label.text == "En tu mazo: %d · Mejoradas: %d" % [owned.total, owned.upgraded], "Etiqueta " + reward_id)
 		for control in game.find_children("*", "Button", true, false):
-			if not control is CardView:
+			if control.name == "InspectCard":
+				# Cards deliberately extend beyond the horizontal reward scroll.
+				var parent = control.get_parent()
+				while parent != null and not parent is CardView:
+					parent = parent.get_parent()
+				check(parent != null and parent.get_global_rect().encloses(control.get_global_rect()), "Inspección dentro de su carta")
+			elif not control is CardView:
 				check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(control.get_global_rect()), "Acciones dentro de pantalla " + control.text)
 		button.pressed.emit()
 		check(game.has_node("DeckOverlay"), "Abre mazo")

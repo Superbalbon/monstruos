@@ -1,6 +1,8 @@
 # Godot 4
 .godot/
 export/
+# Maestros locales: las copias jugables están en assets/cards/.
+assets/art_originals/*/
 *.tmp
 *.csv.import
 *.translation

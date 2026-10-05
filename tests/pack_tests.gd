@@ -49,7 +49,7 @@ func run() -> void:
 	for view in game.hand_box.get_children():
 		if view.card_data.id == "L005":
 			displayed = true
-			check(view.find_child("CostLabel", true, false).text == "1⚡" and not view.disabled, "Coste real visible y carta habilitada")
+			check(view.find_child("CostLabel", true, false).text == "2→1⚡" and not view.disabled, "Descuento y coste real visibles, carta habilitada")
 	check(displayed and pack.coste == 2, "Datos base sin modificar")
 	play("L005")
 	check(game.energy == 1 and game.enemy_hp == 88, "Aullido y Manada cuestan dos en total")
